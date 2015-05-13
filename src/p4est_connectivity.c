@@ -244,6 +244,136 @@ p4est_connectivity_new (p4est_topidx_t num_vertices, p4est_topidx_t num_trees,
   return conn;
 }
 
+p4est_connectivity_t *
+p4est_connectivity_bcast (p4est_connectivity_t * conn_in, int root,
+                          sc_MPI_Comm mpicomm)
+{
+  int                 mpirank, mpiret;
+  p4est_connectivity_t *conn;
+  struct
+  {
+    p4est_topidx_t      num_vertices, num_trees, num_corners, num_ctt;
+    size_t              tree_attr_bytes;
+#ifdef P4_TO_P8
+    p4est_topidx_t      num_edges, num_ett;
+#endif
+  }
+  conn_dimensions;
+
+  mpiret = sc_MPI_Comm_rank (mpicomm, &mpirank);
+  SC_CHECK_MPI (mpiret);
+  /* fill dims_buffer on root process */
+  if (mpirank == root) {
+    P4EST_ASSERT (conn_in != NULL);
+    memset (&conn_dimensions, -1, sizeof (conn_dimensions));
+    conn = conn_in;
+    conn_dimensions.num_corners = conn->num_corners;
+    conn_dimensions.num_trees = conn->num_trees;
+    conn_dimensions.num_vertices = conn->num_vertices;
+    conn_dimensions.tree_attr_bytes = conn->tree_attr_bytes;
+    conn_dimensions.num_ctt = conn->ctt_offset[conn->num_corners];
+#ifdef P4_TO_P8
+    conn_dimensions.num_edges = conn->num_edges;
+    conn_dimensions.num_ett = conn->ett_offset[conn->num_edges];
+#endif
+  }
+  else {
+    P4EST_ASSERT (conn_in == NULL);
+  }
+  /* broadcast the dimensions to all processes */
+  mpiret = sc_MPI_Bcast (&conn_dimensions, sizeof (conn_dimensions),
+                         sc_MPI_BYTE, root, mpicomm);
+  SC_CHECK_MPI (mpiret);
+
+  /* allocate memory for new connectivity */
+  if (mpirank != root) {
+    conn = p4est_connectivity_new (conn_dimensions.num_vertices,
+                                   conn_dimensions.num_trees,
+#ifdef P4_TO_P8
+                                   conn_dimensions.num_edges,
+                                   conn_dimensions.num_ett,
+#endif
+                                   conn_dimensions.num_corners,
+                                   conn_dimensions.num_ctt);
+    p4est_connectivity_set_attr (conn, conn_dimensions.tree_attr_bytes);
+  }
+
+  /* Broadcast the arrays if not NULL.  If a pointer is NULL on one process
+   * then it is NULL on every process, therefore the if-constructions work */
+  if (conn->num_vertices > 0) {
+    P4EST_ASSERT (conn->vertices != NULL);
+    P4EST_ASSERT (conn->tree_to_vertex != NULL);
+    mpiret = sc_MPI_Bcast (conn->vertices, 3 * conn_dimensions.num_vertices,
+                           sc_MPI_DOUBLE, root, mpicomm);
+    SC_CHECK_MPI (mpiret);
+    mpiret = sc_MPI_Bcast (conn->tree_to_vertex,
+                           P4EST_CHILDREN * conn_dimensions.num_trees,
+                           P4EST_MPI_TOPIDX, root, mpicomm);
+    SC_CHECK_MPI (mpiret);
+  }
+
+  mpiret =
+    sc_MPI_Bcast (conn->tree_to_tree, P4EST_FACES * conn_dimensions.num_trees,
+                  P4EST_MPI_TOPIDX, root, mpicomm);
+  SC_CHECK_MPI (mpiret);
+  mpiret =
+    sc_MPI_Bcast (conn->tree_to_face, P4EST_FACES * conn_dimensions.num_trees,
+                  sc_MPI_BYTE, root, mpicomm);
+  SC_CHECK_MPI (mpiret);
+
+  if (conn->num_corners > 0) {
+    P4EST_ASSERT (conn->tree_to_corner != NULL);
+    P4EST_ASSERT (conn->corner_to_tree != NULL);
+    P4EST_ASSERT (conn->corner_to_corner != NULL);
+    mpiret = sc_MPI_Bcast (conn->tree_to_corner,
+                           P4EST_CHILDREN * conn_dimensions.num_trees,
+                           P4EST_MPI_TOPIDX, root, mpicomm);
+    SC_CHECK_MPI (mpiret);
+    mpiret = sc_MPI_Bcast (conn->corner_to_tree, conn_dimensions.num_ctt,
+                           P4EST_MPI_TOPIDX, root, mpicomm);
+    SC_CHECK_MPI (mpiret);
+    mpiret = sc_MPI_Bcast (conn->corner_to_corner, conn_dimensions.num_ctt,
+                           sc_MPI_BYTE, root, mpicomm);
+    SC_CHECK_MPI (mpiret);
+  }
+
+  mpiret = sc_MPI_Bcast (conn->ctt_offset, conn_dimensions.num_corners,
+                         P4EST_MPI_TOPIDX, root, mpicomm);
+  P4EST_ASSERT (conn->ctt_offset[conn->num_corners] ==
+                conn_dimensions.num_ctt);
+  SC_CHECK_MPI (mpiret);
+#ifdef P4_TO_P8
+  if (conn->num_edges > 0) {
+    P4EST_ASSERT (conn->tree_to_edge != NULL);
+    P4EST_ASSERT (conn->edge_to_tree != NULL);
+    P4EST_ASSERT (conn->edge_to_edge != NULL);
+    mpiret = sc_MPI_Bcast (conn->tree_to_edge,
+                           P8EST_EDGES * conn_dimensions.num_trees,
+                           P4EST_MPI_TOPIDX, root, mpicomm);
+    SC_CHECK_MPI (mpiret);
+    mpiret = sc_MPI_Bcast (conn->edge_to_tree, conn_dimensions.num_ett,
+                           P4EST_MPI_TOPIDX, root, mpicomm);
+    SC_CHECK_MPI (mpiret);
+    mpiret = sc_MPI_Bcast (conn->edge_to_edge, conn_dimensions.num_ett,
+                           sc_MPI_BYTE, root, mpicomm);
+    SC_CHECK_MPI (mpiret);
+  }
+  mpiret = sc_MPI_Bcast (conn->ett_offset, conn_dimensions.num_edges,
+                         P4EST_MPI_TOPIDX, root, mpicomm);
+  P4EST_ASSERT (conn->ett_offset[conn->num_edges] == conn_dimensions.num_ett);
+  SC_CHECK_MPI (mpiret);
+#endif
+
+  if (conn->tree_attr_bytes != 0) {
+    mpiret = sc_MPI_Bcast (conn->tree_to_attr,
+                           conn->tree_attr_bytes * conn->num_trees,
+                           sc_MPI_BYTE, root, mpicomm);
+    SC_CHECK_MPI (mpiret);
+  }
+  P4EST_ASSERT (p4est_connectivity_is_valid (conn));
+  return conn;
+}
+
 void
 p4est_connectivity_destroy (p4est_connectivity_t * conn)
 {
@@ -3760,12 +3890,13 @@ int
 p4est_connectivity_is_equivalent (p4est_connectivity_t * conn1,
                                   p4est_connectivity_t * conn2)
 {
+  const size_t        topsize = sizeof (p4est_topidx_t);
+  const size_t        int8size = sizeof (int8_t);
   size_t              count;
   p4est_topidx_t      ntrees, t;
+
   P4EST_ASSERT (p4est_connectivity_is_valid (conn1));
   P4EST_ASSERT (p4est_connectivity_is_valid (conn2));
-  size_t              topsize = sizeof (p4est_topidx_t);
-  size_t              int8size = sizeof (int8_t);
 
   /* same pointer or equality are stronger */
   if (conn1 == conn2 || p4est_connectivity_is_equal (conn1, conn2)) {
@@ -3930,14 +4061,17 @@ p4est_connectivity_getline_upper (FILE * stream)
     }
 
     if (--len == 0) {
+      char               *linen;
+
       len = lenmax;
       lenmax *= 2;
-      char               *linen = P4EST_REALLOC (linep, char, lenmax);
 
+      linen = P4EST_REALLOC (linep, char, lenmax);
       if (linen == NULL) {
         P4EST_FREE (linep);
         return NULL;
       }
+
       line = linen + (line - linep);
       linep = linen;
     }
@@ -4032,38 +4166,40 @@ p4est_connectivity_read_inp_stream (FILE * stream,
     }
     else if (reading_elements) {
       if (fill_trees_and_vertices) {
+        long long int       element_number;
         long long int       v[P4EST_CHILDREN];
         int                 n;
         int                 retval;
 
-        if (num_elements >= *num_trees) {
+        /* Note that when we read in the
+         * vertices we switch from right-hand
+         * vertex ordering to z-order
+         */
+        retval = sscanf (line, "%lld, %lld, %lld, %lld, %lld"
+#ifdef P4_TO_P8
+                         ", %lld, %lld, %lld, %lld"
+#endif
+                         , &element_number, &v[0], &v[1], &v[3], &v[2]
+#ifdef P4_TO_P8
+                         , &v[4], &v[5], &v[7], &v[6]
+#endif
+          );
+        if (retval != P4EST_CHILDREN + 1) {
+          P4EST_LERROR ("Premature end of file");
+          P4EST_FREE (line);
+          return 1;
+        }
+
+        if (element_number > *num_trees) {
           P4EST_LERROR ("Encountered element that will not fit into"
                         " tree_to_vertex array. More elements than expected.\n");
           P4EST_FREE (line);
           return 1;
         }
 
-        /* Note that when we read in the
-         * vertices we switch from right-hand
-         * vertex ordering to z-order
-         */
-        retval = sscanf (line, "%*d, %lld, %lld, %lld, %lld"
-#ifdef P4_TO_P8
-                         ", %lld, %lld, %lld, %lld"
-#endif
-                         , &v[0], &v[1], &v[3], &v[2]
-#ifdef P4_TO_P8
-                         , &v[4], &v[5], &v[7], &v[6]
-#endif
-          );
-        if (retval != P4EST_CHILDREN) {
-          P4EST_LERROR ("Premature end of file");
-          P4EST_FREE (line);
-          return 1;
-        }
-
         for (n = 0; n < P4EST_CHILDREN; ++n)
-          tree_to_vertex[P4EST_CHILDREN * num_elements + n] = v[n] - 1;
+          tree_to_vertex[P4EST_CHILDREN * (element_number - 1) + n] =
+            v[n] - 1;
       }
 
       ++num_elements;
