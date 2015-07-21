@@ -176,11 +176,11 @@ p4est_vtk_writeAll (p4est_t * p4est,
   va_list             ap;
 
   /* enforce that at least 0 scalars/vectors shall be written to file */
-  P4EST_ASSERT (num_cell_scalars >= 0 && num_cell_vectors >= 0 && 
+  P4EST_ASSERT (num_cell_scalars >= 0 && num_cell_vectors >= 0 &&
                 num_point_scalars >= 0 && num_point_vectors >= 0);
 
   /* allocate memory */
-  values = P4EST_ALLOC (double *, num_cell_scalars + num_cell_vectors 
+  values = P4EST_ALLOC (double *, num_cell_scalars + num_cell_vectors
                                   + num_point_scalars + num_point_vectors);
   names = P4EST_ALLOC (const char *, num_cell_scalars + num_cell_vectors
                                      + num_point_scalars + num_point_vectors);
@@ -1388,7 +1388,7 @@ p4est_vtk_writeHeader (p4est_t * p4est,
     return -1;
   }
   vtufile = NULL;
-  
+
 
 #ifndef P4EST_VTK_ASCII
   P4EST_FREE (locidx_data);
@@ -1595,7 +1595,117 @@ p4est_vtk_write_cell_vector (p4est_t * p4est,
                              const char * vector_name,
                              const double * values)
 {
-  SC_ABORT (P4EST_STRING "_vtk_write_cell_vector not implemented");
+    const int           mpirank = p4est->mpirank;
+  const p4est_locidx_t Ncells = p4est->local_num_quadrants;
+  int                 retval;
+  p4est_locidx_t      il;
+#ifndef P4EST_VTK_ASCII
+  P4EST_VTK_FLOAT_TYPE *float_data;
+#endif
+  char                vtufilename[BUFSIZ];
+  FILE               *vtufile;
+
+  /* Have each proc write to its own file */
+  snprintf (vtufilename, BUFSIZ, "%s_%04d.vtu", filename, mpirank);
+
+  /* To be able to fseek in a file you cannot open in append mode.
+   * so you need to open with "r+" and fseek to SEEK_END.
+   */
+  vtufile = fopen (vtufilename, "rb+");
+  if (vtufile == NULL) {
+    P4EST_LERRORF ("Could not open %s for output\n", vtufilename);
+    return -1;
+  }
+  retval = fseek (vtufile, 0L, SEEK_END);
+  if (retval) {
+    P4EST_LERRORF ("Could not fseek %s for output\n", vtufilename);
+    fclose (vtufile);
+    return -1;
+  }
+
+  /* write point position data */
+  fprintf (vtufile, "        <DataArray type=\"%s\" Name=\"%s\""
+           " format=\"%s\" NumberOfComponents=\"%i\">\n",
+           P4EST_VTK_FLOAT_NAME, vector_name, P4EST_VTK_FORMAT_STRING, P4EST_DIM);
+
+#ifdef P4EST_VTK_ASCII
+  for (il = 0; il < P8EST_DIM * Ncells; il++) {
+#ifdef P4EST_VTK_DOUBLES
+    fprintf (vtufile, "     %24.16e\n", values[il]);
+#else
+    fprintf (vtufile, "          %16.8e\n", values[il]);
+#endif
+  }
+#else
+  float_data = P4EST_ALLOC (P4EST_VTK_FLOAT_TYPE, P4EST_DIM * Ncells);
+  for (il = 0; il < P4EST_DIM * Ncells; ++il) {
+    float_data[il] = (P4EST_VTK_FLOAT_TYPE) values[il];
+  }
+
+  fprintf (vtufile, "          ");
+  /* TODO: Don't allocate the full size of the array, only allocate
+   * the chunk that will be passed to zlib and do this a chunk
+   * at a time.
+   */
+  retval = p4est_vtk_write_binary (vtufile, (char *) float_data,
+                                   sizeof (*float_data) * P4EST_DIM * Ncells);
+  fprintf (vtufile, "\n");
+  if (retval) {
+    P4EST_LERROR (P4EST_STRING "_vtk: Error encoding points\n");
+    fclose (vtufile);
+    return -1;
+  }
+  P4EST_FREE (float_data);
+#endif
+  fprintf (vtufile, "        </DataArray>\n");
+
+  if (ferror (vtufile)) {
+    P4EST_LERROR (P4EST_STRING "_vtk: Error writing point vector\n");
+    fclose (vtufile);
+    return -1;
+  }
+  if (fclose (vtufile)) {
+    P4EST_LERROR (P4EST_STRING "_vtk: Error closing point vector\n");
+    return -1;
+  }
+  vtufile = NULL;
+
+  /* Only have the root write to the parallel vtk file */
+  if (mpirank == 0) {
+    char                pvtufilename[BUFSIZ];
+    FILE               *pvtufile;
+    snprintf (pvtufilename, BUFSIZ, "%s.pvtu", filename);
+
+    pvtufile = fopen(pvtufilename, "rb+");
+    if (pvtufile == NULL) {
+      P4EST_LERRORF ("Could not open %s for output\n", pvtufilename);
+      return -1;
+    }
+    retval = fseek (pvtufile, 0L, SEEK_END);
+    if (retval) {
+      P4EST_LERRORF ("Could not fseek %s for output\n", pvtufilename);
+      fclose (pvtufile);
+      return -1;
+    }
+
+    fprintf (pvtufile, "      <PDataArray type=\"%s\" Name=\"%s\""
+             " format=\"%s\" NumberOfComponents=\"%i\"/>\n",
+             P4EST_VTK_FLOAT_NAME, vector_name, P4EST_VTK_FORMAT_STRING, P4EST_DIM);
+
+    if (ferror (pvtufile)) {
+      P4EST_LERROR (P4EST_STRING
+                    "_vtk: Error writing parallel point vector\n");
+      fclose (pvtufile);
+      return -1;
+    }
+    if (fclose (pvtufile)) {
+      P4EST_LERROR (P4EST_STRING
+                    "_vtk: Error closing parallel point vector\n");
+      return -1;
+    }
+  }
+
+  return 0;
 }
 
 int p4est_vtk_switch_to_point_data(p4est_t * p4est,
@@ -1678,7 +1788,7 @@ int p4est_vtk_switch_to_point_data(p4est_t * p4est,
       return -1;
     }
 
-    
+
     /* close xml tag for cell data and prepare writing point data */
     if (write_tree || write_level || write_rank || num_cell_data) {
       char                vtkCellDataString[BUFSIZ] = "";
