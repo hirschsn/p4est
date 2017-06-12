@@ -36,7 +36,13 @@
 
 SC_EXTERN_C_BEGIN;
 
-/** Find the lowest position tq in a quadrant array such that tq >= q.
+/** Find the lowest position tq in a quadrant array such that tq >= q, i.e. the
+ * first quadrant that is not smaller than q.
+ *
+ * \param [in] array     Sorted array of quadrants.
+ * \param [in] q         Quadrant to locate.
+ * \param [in] guess     Initial search position.
+ *
  * \return  Returns the id of the matching quadrant
  *                  or -1 if array < q or the array is empty.
  */
@@ -45,6 +51,11 @@ ssize_t             p4est_find_lower_bound (sc_array_t * array,
                                             size_t guess);
 
 /** Find the highest position tq in a quadrant array such that tq <= q.
+ *
+ * \param [in] array     Sorted array of quadrants.
+ * \param [in] q         Quadrant to locate.
+ * \param [in] guess     Initial search position.
+ *
  * \return  Returns the id of the matching quadrant
  *                  or -1 if array > q or the array is empty.
  */
