@@ -134,6 +134,116 @@ p4est_find_higher_bound (sc_array_t * array,
   return (ssize_t) guess;
 }
 
+ssize_t
+p4est_find_lower_bound_overlap (sc_array_t * array,
+                                const p4est_quadrant_t * q, size_t guess)
+{
+  int                 comp;
+  size_t              count;
+  size_t              quad_low, quad_high;
+  p4est_quadrant_t   *cur;
+
+  count = array->elem_count;
+  if (count == 0)
+    return -1;
+
+  quad_low = 0;
+  quad_high = count - 1;
+
+  for (;;) {
+    P4EST_ASSERT (quad_low <= quad_high);
+    P4EST_ASSERT (quad_low < count && quad_high < count);
+    P4EST_ASSERT (quad_low <= guess && guess <= quad_high);
+
+    /* compare two quadrants */
+    cur = p4est_quadrant_array_index (array, guess);
+    comp = p4est_quadrant_disjoint (q, cur);
+
+    /* check if guess is higher or equal q and there's room below it */
+    if (comp <= 0 && (guess > 0 && p4est_quadrant_disjoint (q, cur - 1) <= 0)) {
+      quad_high = guess - 1;
+      guess = 0.5 * (quad_low + quad_high + 1);
+      continue;
+    }
+
+    /* check if guess is lower than q */
+    if (comp > 0) {
+      quad_low = guess + 1;
+      if (quad_low > quad_high)
+        return -1;
+
+      guess = 0.5 * (quad_low + quad_high);
+      continue;
+    }
+
+    /* check if search range is exceeded */
+    if ((comp < 0) && (quad_high == 0))
+      return -1;
+
+    /* otherwise guess is the correct quadrant */
+    break;
+  }
+
+  return (ssize_t) guess;
+}
+
+ssize_t
+p4est_find_higher_bound_overlap (sc_array_t * array,
+                                 const p4est_quadrant_t * q, size_t guess)
+{
+  int                 comp;
+  size_t              count;
+  size_t              quad_low, quad_high;
+  p4est_quadrant_t   *cur;
+
+  count = array->elem_count;
+  if (count == 0)
+    return -1;
+
+  quad_low = 0;
+  quad_high = count - 1;
+
+  for (;;) {
+    P4EST_ASSERT (quad_low <= quad_high);
+    P4EST_ASSERT (quad_low < count && quad_high < count);
+    P4EST_ASSERT (quad_low <= guess && guess <= quad_high);
+
+    /* compare two quadrants */
+    cur = p4est_quadrant_array_index (array, guess);
+    comp = p4est_quadrant_disjoint (cur, q);
+
+    /* check if guess is lower or equal q and there's room above it */
+    if (comp <= 0 &&
+        (guess < count - 1 && p4est_quadrant_disjoint (cur + 1, q) <= 0)) {
+      quad_low = guess + 1;
+      guess = 0.5 * (quad_low + quad_high);
+      continue;
+    }
+
+    /* check if guess is higher than q */
+    if (comp > 0) {
+      if (guess == 0)
+        return -1;
+
+      quad_high = guess - 1;
+      if (quad_high < quad_low)
+        return -1;
+
+      guess = 0.5 * (quad_low + quad_high + 1);
+      continue;
+    }
+
+    /* check if search range is exceeded */
+    if ((comp < 0) && (quad_low == count - 1))
+      return -1;
+
+    /* otherwise guess is the correct quadrant */
+    break;
+  }
+
+  return (ssize_t) guess;
+}
+
 static              size_t
 p4est_array_split_ancestor_id (sc_array_t * array, size_t zindex, void *data)
 {

@@ -63,6 +63,35 @@ ssize_t             p4est_find_higher_bound (sc_array_t * array,
                                              const p4est_quadrant_t * q,
                                              size_t guess);
 
+/** Find the lowest position tq in a quadrant array such that tq >= q, i.e. the
+ * first quadrant that is not smaller than q. Compare using
+ * p4est_quadrant_disjoint.
+ *
+ * \param [in] array     Sorted array of quadrants.
+ * \param [in] q         Quadrant to locate.
+ * \param [in] guess     Initial search position.
+ *
+ * \return  Returns the id of the matching quadrant
+ *                  or -1 if not found or the array is empty.
+ */
+ssize_t             p4est_find_lower_bound_overlap (sc_array_t * array,
+                                                    const p4est_quadrant_t *
+                                                    q, size_t guess);
+
+/** Find the highest position tq in a quadrant array such that tq <= q. Compare
+ * using p4est_quadrant_disjoint.
+ *
+ * \param [in] array     Sorted array of quadrants.
+ * \param [in] q         Quadrant to locate.
+ * \param [in] guess     Initial search position.
+ *
+ * \return  Returns the id of the matching quadrant
+ *                  or -1 if not found or the array is empty.
+ */
+ssize_t             p4est_find_higher_bound_overlap (sc_array_t * array,
+                                                     const p4est_quadrant_t *
+                                                     q, size_t guess);
+
 /** Split an array of quadrants by the children of an ancestor.
  *
  * Given a sorted \b array of quadrants that have a common ancestor at level
