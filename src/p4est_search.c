@@ -60,7 +60,7 @@ p4est_find_lower_bound (sc_array_t * array,
     /* check if guess is higher or equal q and there's room below it */
     if (comp <= 0 && (guess > 0 && p4est_quadrant_compare (q, cur - 1) <= 0)) {
       quad_high = guess - 1;
-      guess = (quad_low + quad_high + 1) / 2;
+      guess = 0.5 * (quad_low + quad_high + 1);
       continue;
     }
 
@@ -70,7 +70,7 @@ p4est_find_lower_bound (sc_array_t * array,
       if (quad_low > quad_high)
         return -1;
 
-      guess = (quad_low + quad_high) / 2;
+      guess = 0.5 * (quad_low + quad_high);
       continue;
     }
 
@@ -110,7 +110,7 @@ p4est_find_higher_bound (sc_array_t * array,
     if (comp <= 0 &&
         (guess < count - 1 && p4est_quadrant_compare (cur + 1, q) <= 0)) {
       quad_low = guess + 1;
-      guess = (quad_low + quad_high) / 2;
+      guess = 0.5 * (quad_low + quad_high);
       continue;
     }
 
@@ -123,7 +123,7 @@ p4est_find_higher_bound (sc_array_t * array,
       if (quad_high < quad_low)
         return -1;
 
-      guess = (quad_low + quad_high + 1) / 2;
+      guess = 0.5 * (quad_low + quad_high + 1);
       continue;
     }
 
