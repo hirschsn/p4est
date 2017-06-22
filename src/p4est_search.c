@@ -32,7 +32,7 @@
 #include <p8est_search.h>
 #endif
 
-ssize_t
+static ssize_t
 generic_lower_bound (sc_array_t * array, const p4est_quadrant_t * q,
                      size_t guess,
                      int (*compare_func) (const void *, const void *))
@@ -88,7 +88,7 @@ generic_lower_bound (sc_array_t * array, const p4est_quadrant_t * q,
   return (ssize_t) guess;
 }
 
-ssize_t
+static ssize_t
 generic_higher_bound (sc_array_t * array, const p4est_quadrant_t * q,
                       size_t guess, int (*compare_func) (const void *,
                                                          const void *))
