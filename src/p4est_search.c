@@ -184,7 +184,24 @@ p4est_find_higher_bound_overlap (sc_array_t * array,
   return generic_higher_bound (array, q, guess, compare_func);
 }
 
+ssize_t
+p4est_find_lower_bound_overlap_piggy (sc_array_t * array,
+                                      const p4est_quadrant_t * q,
+                                      size_t guess)
+{
+  int                 (*compare_func) (const void *, const void *);
+  compare_func = &p4est_quadrant_disjoint_piggy;
+  return generic_lower_bound (array, q, guess, compare_func);
+}
 
+ssize_t
+p4est_find_higher_bound_overlap_piggy (sc_array_t * array,
+                                       const p4est_quadrant_t * q,
+                                       size_t guess)
+{
+  int                 (*compare_func) (const void *, const void *);
+  compare_func = &p4est_quadrant_disjoint_piggy;
+  return generic_higher_bound (array, q, guess, compare_func);
 }
 
 static              size_t

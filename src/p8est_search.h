@@ -92,6 +92,37 @@ ssize_t             p8est_find_higher_bound_overlap (sc_array_t * array,
                                                      const p8est_quadrant_t *
                                                      q, size_t guess);
 
+/** Find the lowest position tq in a quadrant array such that tq >= q, i.e. the
+ * first quadrant that is not smaller than q. Compare using
+ * p8est_quadrant_disjoint_piggy.
+ *
+ * \param [in] array     Sorted array of quadrants.
+ * \param [in] q         Quadrant to locate.
+ * \param [in] guess     Initial search position.
+ *
+ * \return  Returns the id of the matching quadrant
+ *                  or -1 if not found or the array is empty.
+ */
+ssize_t             p8est_find_lower_bound_overlap_piggy (sc_array_t * array,
+                                                          const
+                                                          p8est_quadrant_t *
+                                                          q, size_t guess);
+
+/** Find the highest position tq in a quadrant array such that tq <= q. Compare
+ * using p8est_quadrant_disjoint_piggy.
+ *
+ * \param [in] array     Sorted array of quadrants.
+ * \param [in] q         Quadrant to locate.
+ * \param [in] guess     Initial search position.
+ *
+ * \return  Returns the id of the matching quadrant
+ *                  or -1 if not found or the array is empty.
+ */
+ssize_t             p8est_find_higher_bound_overlap_piggy (sc_array_t * array,
+                                                           const
+                                                           p8est_quadrant_t *
+                                                           q, size_t guess);
+
 /** Given a sorted \b array of quadrants that have a common ancestor at level
  * \b level, compute the \b indices of the first quadrant in each of the common
  * ancestor's children at level \b level + 1.
