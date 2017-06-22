@@ -105,7 +105,7 @@ ssize_t             p4est_find_higher_bound_overlap (sc_array_t * array,
  */
 ssize_t             p4est_find_lower_bound_overlap_piggy (sc_array_t * array,
                                                           const
-                                                          p8est_quadrant_t *
+                                                          p4est_quadrant_t *
                                                           q, size_t guess);
 
 /** Find the highest position tq in a quadrant array such that tq <= q. Compare
@@ -120,7 +120,7 @@ ssize_t             p4est_find_lower_bound_overlap_piggy (sc_array_t * array,
  */
 ssize_t             p4est_find_higher_bound_overlap_piggy (sc_array_t * array,
                                                            const
-                                                           p8est_quadrant_t *
+                                                           p4est_quadrant_t *
                                                            q, size_t guess);
 
 /** Split an array of quadrants by the children of an ancestor.
