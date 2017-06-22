@@ -284,6 +284,11 @@
 #define p4est_find_higher_bound         p8est_find_higher_bound
 #define p4est_find_lower_bound_overlap  p8est_find_lower_bound_overlap
 #define p4est_find_higher_bound_overlap p8est_find_higher_bound_overlap
+#define p4est_find_lower_bound_overlap_piggy \
+        p8est_find_lower_bound_overlap_piggy
+#define p4est_find_higher_bound_overlap_piggy \
+        p8est_find_higher_bound_overlap_piggy
+#define p4est_find_quadrant_cumulative  p8est_find_quadrant_cumulative
 #define p4est_split_array               p8est_split_array
 #define p4est_find_range_boundaries     p8est_find_range_boundaries
 #define p4est_search                    p8est_search
