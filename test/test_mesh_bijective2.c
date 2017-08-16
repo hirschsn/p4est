@@ -268,6 +268,18 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
     SC_ABORT_NOT_REACHED ();
   }
 
+
+  // TODO:
+  // 1. do not discard and re-allocate sc_arrays
+  // 2. crash if encoding is invalid
+  /** allocate containers */
+  neighboring_quads = sc_array_new (sizeof (p4est_quadrant_t *));
+  neighboring_encs = sc_array_new (sizeof (int));
+  neighboring_qids = sc_array_new (sizeof (int));
+  found_quads = sc_array_new (sizeof (p4est_quadrant_t *));
+  found_encs = sc_array_new (sizeof (int));
+  found_qids = sc_array_new (sizeof (int));
+
   for (quad = 0; quad < p4est->global_num_quadrants; ++quad) {
     sc_MPI_Barrier (p4est->mpicomm);
     /** loop over all quads, verify only on the processor owning the respective
@@ -278,10 +290,10 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
       norm_quad = quad - p4est->global_first_quadrant[p4est->mpirank];
 
       for (i = 0; i < imax; ++i) {
-        /** allocate containers */
-        neighboring_quads = sc_array_new (sizeof (p4est_quadrant_t *));
-        neighboring_encs = sc_array_new (sizeof (int));
-        neighboring_qids = sc_array_new (sizeof (int));
+        /** empty containers */
+        sc_array_truncate(neighboring_quads);
+        sc_array_truncate(neighboring_encs);
+        sc_array_truncate(neighboring_qids);
 
         /** set constants for decoding */
         set_limits (i, ghost->btype, &l_same_size, &u_same_size,
@@ -350,14 +362,14 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
                            &neighbor_orientation, &neighbor_entity);
           iinv = encode_direction (neighbor_entity, entity);
 
+          /** allocate containers */
+          sc_array_truncate(found_quads);
+          sc_array_truncate(found_encs);
+          sc_array_truncate(found_qids);
+
           if (l_same_size <= neighbor_enc && neighbor_enc < u_same_size) {
             P4EST_ASSERT (0 == neighbor_sub_ctr);
             P4EST_ASSERT (0 == found_sub_ctr);
-            /** allocate containers */
-            found_quads = sc_array_new (sizeof (p4est_quadrant_t *));
-            found_encs = sc_array_new (sizeof (int));
-            found_qids = sc_array_new (sizeof (int));
-
             /** search neighbors */
             p4est_mesh_get_neighbors (p4est, ghost, mesh, neighbor_qid, iinv,
                                       found_quads, found_encs, found_qids);
@@ -386,22 +398,12 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
                 success = 1;
               }
             }
-
-            /** de-allocate containers */
-            sc_array_destroy (found_quads);
-            sc_array_destroy (found_encs);
-            sc_array_destroy (found_qids);
           }
           else if (l_double_size <= neighbor_enc &&
                    neighbor_enc < u_double_size) {
             P4EST_ASSERT (0 == neighbor_sub_ctr);
             P4EST_ASSERT (0 <= found_sub_ctr
                           && found_sub_ctr < n_hanging_quads);
-
-            /** allocate containers */
-            found_quads = sc_array_new (sizeof (p4est_quadrant_t *));
-            found_encs = sc_array_new (sizeof (int));
-            found_qids = sc_array_new (sizeof (int));
 
             /** search neighbors */
             p4est_mesh_get_neighbors (p4est, ghost, mesh, neighbor_qid, iinv,
@@ -448,21 +450,11 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
                 }
               }
             }
-
-            /** de-allocate containers */
-            sc_array_destroy (found_quads);
-            sc_array_destroy (found_encs);
-            sc_array_destroy (found_qids);
           }
           else if (l_half_size <= neighbor_enc && neighbor_enc < u_half_size) {
             P4EST_ASSERT (0 <= neighbor_sub_ctr &&
                           neighbor_sub_ctr < n_hanging_quads);
             P4EST_ASSERT (0 == found_sub_ctr);
-
-            /** allocate containers */
-            found_quads = sc_array_new (sizeof (p4est_quadrant_t *));
-            found_encs = sc_array_new (sizeof (int));
-            found_qids = sc_array_new (sizeof (int));
 
             /** search neighbors */
             p4est_mesh_get_neighbors (p4est, ghost, mesh, neighbor_qid, iinv,
@@ -495,25 +487,22 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
                 neighbor_sub_ctr = (neighbor_sub_ctr + 1) % n_hanging_quads;
               }
             }
-
-            /** de-allocate containers */
-            sc_array_destroy (found_quads);
-            sc_array_destroy (found_encs);
-            sc_array_destroy (found_qids);
           }
           else {
             SC_ABORT_NOT_REACHED ();
           }
           P4EST_ASSERT (1 == success);
         }
-
-        /** de-allocate containers */
-        sc_array_destroy (neighboring_quads);
-        sc_array_destroy (neighboring_encs);
-        sc_array_destroy (neighboring_qids);
       }
     }
   }
+  /** de-allocate containers */
+  sc_array_destroy (neighboring_quads);
+  sc_array_destroy (neighboring_encs);
+  sc_array_destroy (neighboring_qids);
+  sc_array_destroy (found_quads);
+  sc_array_destroy (found_encs);
+  sc_array_destroy (found_qids);
 }
 
 /* Function for testing p4est-mesh for a single tree scenario
