@@ -268,10 +268,6 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
     SC_ABORT_NOT_REACHED ();
   }
 
-
-  // TODO:
-  // 1. do not discard and re-allocate sc_arrays
-  // 2. crash if encoding is invalid
   /** allocate containers */
   neighboring_quads = sc_array_new (sizeof (p4est_quadrant_t *));
   neighboring_encs = sc_array_new (sizeof (int));
@@ -291,9 +287,9 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
 
       for (i = 0; i < imax; ++i) {
         /** empty containers */
-        sc_array_truncate(neighboring_quads);
-        sc_array_truncate(neighboring_encs);
-        sc_array_truncate(neighboring_qids);
+        sc_array_truncate (neighboring_quads);
+        sc_array_truncate (neighboring_encs);
+        sc_array_truncate (neighboring_qids);
 
         /** set constants for decoding */
         set_limits (i, ghost->btype, &l_same_size, &u_same_size,
@@ -363,9 +359,9 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
           iinv = encode_direction (neighbor_entity, entity);
 
           /** allocate containers */
-          sc_array_truncate(found_quads);
-          sc_array_truncate(found_encs);
-          sc_array_truncate(found_qids);
+          sc_array_truncate (found_quads);
+          sc_array_truncate (found_encs);
+          sc_array_truncate (found_qids);
 
           if (l_same_size <= neighbor_enc && neighbor_enc < u_same_size) {
             P4EST_ASSERT (0 == neighbor_sub_ctr);
