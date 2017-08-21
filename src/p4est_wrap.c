@@ -208,7 +208,7 @@ p4est_wrap_new_p4est (p4est_t * p4est, int hollow, p4est_connect_type_t btype,
   if (!pp->hollow) {
     pp->flags = P4EST_ALLOC_ZERO (uint8_t, pp->p4est->local_num_quadrants);
     pp->ghost = p4est_ghost_new (pp->p4est, pp->btype);
-    pp->mesh = p4est_mesh_new_ext (pp->p4est, pp->ghost, 1, 1, pp->btype);
+    pp->mesh = p4est_mesh_new_ext (pp->p4est, pp->ghost, 1, 1, 0, pp->btype);
   }
 
   pp->p4est->user_pointer = pp;
@@ -451,7 +451,7 @@ p4est_wrap_set_hollow (p4est_wrap_t * pp, int hollow)
     /* Allocate the ghost, mesh, and flag members */
     pp->flags = P4EST_ALLOC_ZERO (uint8_t, pp->p4est->local_num_quadrants);
     pp->ghost = p4est_ghost_new (pp->p4est, pp->btype);
-    pp->mesh = p4est_mesh_new_ext (pp->p4est, pp->ghost, 1, 1, pp->btype);
+    pp->mesh = p4est_mesh_new_ext (pp->p4est, pp->ghost, 1, 1, 0, pp->btype);
   }
   else {
     /* Free and nullify the ghost, mesh, and flag members */
@@ -631,7 +631,8 @@ p4est_wrap_adapt (p4est_wrap_t * pp)
     pp->flags = P4EST_ALLOC_ZERO (uint8_t, p4est->local_num_quadrants);
 
     pp->ghost_aux = p4est_ghost_new (p4est, pp->btype);
-    pp->mesh_aux = p4est_mesh_new_ext (p4est, pp->ghost_aux, 1, 1, pp->btype);
+    pp->mesh_aux =
+      p4est_mesh_new_ext (p4est, pp->ghost_aux, 1, 1, 0, pp->btype);
     pp->match_aux = 1;
   }
 #ifdef P4EST_ENABLE_DEBUG
@@ -754,7 +755,7 @@ p4est_wrap_partition (p4est_wrap_t * pp, int weight_exponent,
     pp->flags = P4EST_ALLOC_ZERO (uint8_t, pp->p4est->local_num_quadrants);
 
     pp->ghost = p4est_ghost_new (pp->p4est, pp->btype);
-    pp->mesh = p4est_mesh_new_ext (pp->p4est, pp->ghost, 1, 1, pp->btype);
+    pp->mesh = p4est_mesh_new_ext (pp->p4est, pp->ghost, 1, 1, 0, pp->btype);
 
     /* Query the window onto global quadrant sequence after partition */
     if (unchanged_first != NULL || unchanged_length != NULL ||

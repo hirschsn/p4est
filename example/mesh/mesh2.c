@@ -150,7 +150,7 @@ hack_test (mpi_context_t * mpi, p4est_connectivity_t * connectivity)
   p4est_vtk_write_file (p4est, NULL, "mesh_hack");
 
   ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
-  mesh = p4est_mesh_new_ext (p4est, ghost, 1, 1, P4EST_CONNECT_FULL);
+  mesh = p4est_mesh_new_ext (p4est, ghost, 1, 1, 0, P4EST_CONNECT_FULL);
 
   lnq = mesh->local_num_quadrants;
   lng = mesh->ghost_num_quadrants;
@@ -308,7 +308,7 @@ test_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
 static void
 mesh_run (mpi_context_t * mpi, p4est_connectivity_t * connectivity,
           int uniform, int compute_tree_index, int compute_level_lists,
-          p4est_connect_type_t mesh_btype)
+          int compute_parallel_boundary, p4est_connect_type_t mesh_btype)
 {
   int                 mpiret;
   unsigned            crc;
@@ -354,12 +354,11 @@ mesh_run (mpi_context_t * mpi, p4est_connectivity_t * connectivity,
   ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
   ghost_data = P4EST_ALLOC (user_data_t, ghost->ghosts.elem_count);
   p4est_ghost_exchange_data (p4est, ghost, ghost_data);
-  mesh = p4est_mesh_new_ext (p4est, ghost,
-                             compute_tree_index, compute_level_lists,
-                             mesh_btype);
-  test_mesh (p4est, ghost, mesh,
-             compute_tree_index, compute_level_lists, mesh_btype,
-             ghost_data, uniform);
+  mesh =
+    p4est_mesh_new_ext (p4est, ghost, compute_tree_index, compute_level_lists,
+                        compute_parallel_boundary, mesh_btype);
+  test_mesh (p4est, ghost, mesh, compute_tree_index, compute_level_lists,
+             mesh_btype, ghost_data, uniform);
 
   /* compute memory used */
   local_used[0] = (long) p4est_connectivity_memory_used (p4est->connectivity);
@@ -550,10 +549,11 @@ main (int argc, char **argv)
             1,                  /* uniform refinement? */
             0,                  /* compute tree index? */
             1,                  /* compute level lists? */
+            0,                  /* compute parallel boundary? */
             P4EST_CONNECT_FULL);        /* connect type */
-  mesh_run (mpi, connectivity, 0, 1, 0, P4EST_CONNECT_FULL);
-  mesh_run (mpi, connectivity, 0, 0, 0, P4EST_CONNECT_FACE);
-  mesh_run (mpi, connectivity, 1, 1, 1, P4EST_CONNECT_FACE);
+  mesh_run (mpi, connectivity, 0, 1, 0, 0, P4EST_CONNECT_FULL);
+  mesh_run (mpi, connectivity, 0, 0, 0, 0, P4EST_CONNECT_FACE);
+  mesh_run (mpi, connectivity, 1, 1, 1, 0, P4EST_CONNECT_FACE);
 #endif
 
   /* clean up and exit */
