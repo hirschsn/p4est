@@ -150,7 +150,12 @@ typedef struct
                                              are arrays of local quadrant ids.
                                                Is NULL by default, but may be
                                              enabled by \ref p8est_mesh_new_ext. */
-  /* TODO: Add ghost_level, parallel_boundary, and mirror_qid */
+  sc_array_t         *ghost_level;      /**< Stores lists of per-level ghosts.
+                                             The array has entries indexed by
+                                             0..P4EST_QMAXLEVEL inclusive that
+                                             are arrays of ghost quadrant ids.
+                                               Is NULL by default, but may be
+                                             enabled by \ref p4est_mesh_new_ext. */
 
   /* These members are NULL if edges are not requested in \ref p8est_mesh_new. */
   p4est_locidx_t      local_num_edges;  /**< unsame-size and tree-boundary edges */

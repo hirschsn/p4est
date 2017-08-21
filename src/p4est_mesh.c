@@ -1149,7 +1149,9 @@ p4est_mesh_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
   int                 rank;
   p4est_locidx_t      lq, ng;
   p4est_locidx_t      jl;
+  p4est_locidx_t     *insert;
   p4est_mesh_t       *mesh;
+  p4est_quadrant_t   *q;
 
   /* check whether input condition for p4est is met */
   P4EST_ASSERT (p4est_is_balanced (p4est, btype));
@@ -1185,9 +1187,11 @@ p4est_mesh_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
   /* Allocate optional per-level lists of quadrants */
   if (compute_level_lists) {
     mesh->quad_level = P4EST_ALLOC (sc_array_t, P4EST_QMAXLEVEL + 1);
+    mesh->ghost_level = P4EST_ALLOC (sc_array_t, P4EST_QMAXLEVEL + 1);
 
     for (jl = 0; jl <= P4EST_QMAXLEVEL; ++jl) {
       sc_array_init (mesh->quad_level + jl, sizeof (p4est_locidx_t));
+      sc_array_init (mesh->ghost_level + jl, sizeof (p4est_locidx_t));
     }
   }
 
@@ -1199,6 +1203,13 @@ p4est_mesh_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
       P4EST_ASSERT (rank < p4est->mpisize);
     }
     mesh->ghost_to_proc[jl] = rank;
+    if (compute_level_lists) {
+      /* check level and push ghost to respective list in ghost_level */
+      q = p4est_quadrant_array_index (&ghost->ghosts, jl);
+      insert =
+        (p4est_locidx_t *) sc_array_push (mesh->ghost_level + q->level);
+      *insert = jl;
+    }
   }
 
   /* Fill face arrays with default values */
@@ -1260,8 +1271,10 @@ p4est_mesh_destroy (p4est_mesh_t * mesh)
   if (mesh->quad_level != NULL) {
     for (level = 0; level <= P4EST_QMAXLEVEL; ++level) {
       sc_array_reset (mesh->quad_level + level);
+      sc_array_reset (mesh->ghost_level + level);
     }
     P4EST_FREE (mesh->quad_level);
+    P4EST_FREE (mesh->ghost_level);
   }
 
   P4EST_FREE (mesh->ghost_to_proc);
