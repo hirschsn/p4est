@@ -263,7 +263,7 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
   }
 
   /* we have excluded between 0 and all quadrants. */
-  P4EST_ASSERT (0 <= (size_t) goodones && (size_t) goodones < nAdjacentQuads);
+  P4EST_ASSERT (0 <= (size_t) goodones && goodones < nAdjacentQuads);
 
   if (goodones > 0) {
     /* Allocate and fill edge information in the mesh structure */
@@ -378,8 +378,7 @@ mesh_corner_process_inter_tree_corners (p4est_iter_corner_info_t * info,
   }
 
   /* we have excluded between 0 and all quadrants. */
-  P4EST_ASSERT (0 <= (size_t) goodones &&
-                (size_t) goodones < n_adjacent_quads);
+  P4EST_ASSERT (0 <= (size_t) goodones && goodones < n_adjacent_quads);
 
   if (goodones > 0) {
     /* Allocate and fill corner information in the mesh structure */
