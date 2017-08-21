@@ -117,6 +117,7 @@ typedef struct
                                              are arrays of local quadrant ids.
                                                Is NULL by default, but may be
                                              enabled by \ref p4est_mesh_new_ext. */
+  /* TODO: Add ghost_level, parallel_boundary, and mirror_qid */
 
   /* These members are NULL if corners are not requested in \ref p4est_mesh_new. */
   p4est_locidx_t      local_num_corners;        /* tree-boundary corners */
@@ -210,8 +211,6 @@ p4est_quadrant_t   *p4est_mesh_get_quadrant (p4est_t * p4est,
  *          mesh.
  * TODO: Encodings are the same as in p4est_mesh for all quadrants.
  * TODO: Ghosts can be encoded by returning the quad_to_quad convention in qid.
- *       For ghost quadrants, we add -300 to the values in p4est_mesh.
- *       This means that values below -100 belong to ghosts, values above to locals.
  *          Positive values are for local quadrants, negative values indicate
  *          ghost quadrants.
  *          Faces:     1 ..   8 => same size neighbor
