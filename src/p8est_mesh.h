@@ -140,6 +140,10 @@ typedef struct
                                                Is NULL by default, but may be
                                              enabled by \ref p8est_mesh_new_ext. */
   int                *ghost_to_proc;    /**< processor for each ghost quad */
+  p4est_locidx_t     *parallel_boundary;/**< Stores for each quadrant its mirror
+                                             index or -1 (if the quadrant is not
+                                             a mirror) */
+  p4est_locidx_t     *mirror_qid;       /**< Stores for each mirror its qid. */
 
   p4est_locidx_t     *quad_to_quad;     /**< one index for each of the 6 faces */
   int8_t             *quad_to_face;     /**< encodes orientation/2:1 status */

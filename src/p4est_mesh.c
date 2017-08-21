@@ -1195,6 +1195,17 @@ p4est_mesh_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
     }
   }
 
+  /* allocate optional data structures for parallel for parallel boundary and
+     set initial values. */
+  if (compute_parallel_boundary) {
+    mesh->parallel_boundary = P4EST_ALLOC (p4est_locidx_t, lq);
+    mesh->mirror_qid =
+      P4EST_ALLOC (p4est_locidx_t, ghost->mirrors.elem_count);
+    memset (mesh->parallel_boundary, (char) -1, lq * sizeof (p4est_locidx_t));
+    memset (mesh->mirror_qid, (char) -1,
+            ghost->mirrors.elem_count * sizeof (p4est_locidx_t));
+  }
+
   /* Populate ghost information */
   rank = 0;
   for (jl = 0; jl < ng; ++jl) {
@@ -1275,6 +1286,11 @@ p4est_mesh_destroy (p4est_mesh_t * mesh)
     }
     P4EST_FREE (mesh->quad_level);
     P4EST_FREE (mesh->ghost_level);
+  }
+
+  if (mesh->parallel_boundary != NULL) {
+    P4EST_FREE (mesh->parallel_boundary);
+    P4EST_FREE (mesh->mirror_qid);
   }
 
   P4EST_FREE (mesh->ghost_to_proc);
