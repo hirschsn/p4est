@@ -138,8 +138,9 @@ p4est_t            *p4est_new_ext (sc_MPI_Comm mpicomm,
  *                                  compute the quad_to_tree list.
  * \param [in] compute_level_lists  Boolean to decide whether to compute the
  *                                  level lists in quad_level.
- * TODO: Add compute_parallel_boundary switch that will populate
- *       parallel_boundary and mirror_qid arrays.
+ * \param [in] computer_parallel_boundary  Boolean to decide whether to allocate
+ *                                         and compute parallel_boundary and
+ *                                         mirror_qid.
  * \param [in] btype                Currently ignored, only face neighbors
  *                                  are stored.
  * \return                          A fully allocated mesh structure.
@@ -148,6 +149,7 @@ p4est_mesh_t       *p4est_mesh_new_ext (p4est_t * p4est,
                                         p4est_ghost_t * ghost,
                                         int compute_tree_index,
                                         int compute_level_lists,
+                                        int compute_parallel_boundary,
                                         p4est_connect_type_t btype);
 
 /** Make a deep copy of a p4est.

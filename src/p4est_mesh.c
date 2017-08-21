@@ -1134,13 +1134,13 @@ p4est_mesh_t       *
 p4est_mesh_new (p4est_t * p4est, p4est_ghost_t * ghost,
                 p4est_connect_type_t btype)
 {
-  return p4est_mesh_new_ext (p4est, ghost, 0, 0, btype);
+  return p4est_mesh_new_ext (p4est, ghost, 0, 0, 0, btype);
 }
 
 p4est_mesh_t       *
 p4est_mesh_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
                     int compute_tree_index, int compute_level_lists,
-                    p4est_connect_type_t btype)
+                    int compute_parallel_boundary, p4est_connect_type_t btype)
 {
   int                 do_corner = 0;
 #ifdef P4_TO_P8
