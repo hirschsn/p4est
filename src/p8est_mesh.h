@@ -135,6 +135,7 @@ typedef struct
 {
   p4est_locidx_t      local_num_quadrants;
   p4est_locidx_t      ghost_num_quadrants;
+  p8est_connect_type_t btype; /**< which neighbors are considered in mesh */
 
   p4est_topidx_t     *quad_to_tree;     /**< tree index for each local quad.
                                                Is NULL by default, but may be

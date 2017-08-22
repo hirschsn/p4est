@@ -1207,6 +1207,9 @@ p4est_mesh_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
   lq = mesh->local_num_quadrants = p4est->local_num_quadrants;
   ng = mesh->ghost_num_quadrants = (p4est_locidx_t) ghost->ghosts.elem_count;
 
+  mesh->btype = btype;
+  P4EST_ASSERT (mesh->btype <= ghost->btype);
+
   /* decide which callback function have to be activated */
 #ifdef P4_TO_P8
   if (btype >= P8EST_CONNECT_EDGE) {
