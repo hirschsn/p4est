@@ -1128,15 +1128,26 @@ p4est_mesh_memory_used (p4est_mesh_t * mesh)
   }
 
   if (mesh->quad_level != NULL) {
-    ql_memory = sizeof (sc_array_t) * (P4EST_QMAXLEVEL + 1);
+    ql_memory = 2 * sizeof (sc_array_t) * (P4EST_QMAXLEVEL + 1);
     for (level = 0; level <= P4EST_QMAXLEVEL; ++level) {
       ql_memory += sc_array_memory_used (mesh->quad_level + level, 0);
+      ql_memory += sc_array_memory_used (mesh->ghost_level + level, 0);
     }
+  }
+
+  if (mesh->parallel_boundary) {
+    pb_memory = sizeof (p4est_locidx_t) * lqz;
+    for (i = 0; i < lqz; ++i) {
+      if (mesh->parallel_boundary[i] != -1) {
+        ++n_mirrors;
+      }
+    }
+    pb_memory += n_mirrors * sizeof (p4est_locidx_t);
   }
 
   /* basic memory plus face information */
   all_memory =
-    sizeof (p4est_mesh_t) + qtt_memory + ql_memory +
+    sizeof (p4est_mesh_t) + qtt_memory + ql_memory + pb_memory +
     P4EST_FACES * lqz * (sizeof (p4est_locidx_t) + sizeof (int8_t)) +
     ngz * sizeof (int) + sc_array_memory_used (mesh->quad_to_half, 1);
 
