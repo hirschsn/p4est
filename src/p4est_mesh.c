@@ -36,6 +36,21 @@
 #include <p8est_search.h>
 #endif /* P4_TO_P8 */
 
+/*********************** iteration struct ****************************/
+
+/** Struct that is used as user_data in call to \ref p4est_iterate from
+ * \ref p4est_mesh_new_ext.
+ * mesh contains a pointer to the mesh that is currently to be created.
+ * count_mirrors is used to populate parallel_boundary flag in
+ * \ref mesh_iter_volume if compute_parallel_boundary flag is set in
+ * \ref p4est_mesh_new_ext.
+ */
+typedef struct
+{
+  p4est_mesh_t       *mesh;
+  size_t              count_mirrors;
+} mesh_iteration_t;
+
 /*********************** constructor functions ***********************/
 
 /** Populate mesh information for corners across tree boundaries, i.e. every
@@ -411,7 +426,7 @@ mesh_iter_corner (p4est_iter_corner_info_t * info, void *user_data)
   int                 visited[P4EST_CHILDREN];
   size_t              cz, zz;
   p4est_locidx_t      qoffset, qid1, qid2;
-  p4est_mesh_t       *mesh = (p4est_mesh_t *) user_data;
+  p4est_mesh_t       *mesh = ((mesh_iteration_t *) user_data)->mesh;
   p4est_iter_corner_side_t *side1, *side2;
   p4est_tree_t       *tree1;
   sc_array_t         *trees = info->p4est->trees;
@@ -518,7 +533,7 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
   p4est_locidx_t      eid1, eid2;
   p4est_locidx_t      edgeid;
   p4est_locidx_t      in_qtoe, edgeid_offset;
-  p4est_mesh_t       *mesh = (p4est_mesh_t *) user_data;
+  p4est_mesh_t       *mesh = ((mesh_iteration_t *) user_data)->mesh;
   p8est_iter_edge_side_t *side1, *side2, *tempside;
   p4est_tree_t       *tree1;
 
@@ -896,7 +911,7 @@ mesh_iter_face (p4est_iter_face_info_t * info, void *user_data)
 {
   int                 h;
   int                 swapsides;
-  p4est_mesh_t       *mesh = (p4est_mesh_t *) user_data;
+  p4est_mesh_t       *mesh = ((mesh_iteration_t *) user_data)->mesh;
   p4est_locidx_t      jl, jl2, jls[P4EST_HALF];
   p4est_locidx_t      in_qtoq, halfindex;
   p4est_locidx_t     *halfentries;
@@ -1056,9 +1071,12 @@ mesh_iter_face (p4est_iter_face_info_t * info, void *user_data)
 static void
 mesh_iter_volume (p4est_iter_volume_info_t * info, void *user_data)
 {
-  p4est_mesh_t       *mesh = (p4est_mesh_t *) user_data;
+  p4est_mesh_t       *mesh = ((mesh_iteration_t *) user_data)->mesh;
+  size_t             *count_mirrors =
+    &((mesh_iteration_t *) user_data)->count_mirrors;
   p4est_tree_t       *tree;
   p4est_locidx_t     *quadid, qid;
+  p4est_quadrant_t   *m;
   int                 level = info->quad->level;
 
   /* We could use a static quadrant counter, but that gets uglier */
@@ -1066,24 +1084,40 @@ mesh_iter_volume (p4est_iter_volume_info_t * info, void *user_data)
   P4EST_ASSERT (0 <= info->quadid &&
                 info->quadid < (p4est_locidx_t) tree->quadrants.elem_count);
 
-  if (mesh->quad_to_tree != NULL) {
+  if (mesh->quad_to_tree) {
     mesh->quad_to_tree[tree->quadrants_offset + info->quadid] = info->treeid;
   }
 
-  if (mesh->quad_level != NULL) {
+  qid = tree->quadrants_offset + info->quadid;
+  if (mesh->quad_level) {
     quadid = (p4est_locidx_t *) sc_array_push (mesh->quad_level + level);
-    qid = tree->quadrants_offset + info->quadid;
     *quadid = qid;
+  }
+
+  if (mesh->parallel_boundary) {
+    if (*count_mirrors < info->ghost_layer->mirrors.elem_count) {
+      m =
+        p4est_quadrant_array_index (&info->ghost_layer->mirrors,
+                                    *count_mirrors);
+      if (p4est_quadrant_is_equal (info->quad, m)
+          && m->p.piggy1.which_tree == info->treeid) {
+        mesh->parallel_boundary[qid] = *count_mirrors;
+        mesh->mirror_qid[*count_mirrors] = qid;
+        ++(*count_mirrors);
+      }
+    }
   }
 }
 
 size_t
 p4est_mesh_memory_used (p4est_mesh_t * mesh)
 {
-  size_t              lqz, ngz;
+  size_t              i, lqz, ngz;
   int                 level;
+  int                 n_mirrors;
   size_t              qtt_memory = 0;
   size_t              ql_memory = 0;
+  size_t              pb_memory = 0;
   size_t              all_memory;
 
   lqz = (size_t) mesh->local_num_quadrants;
@@ -1257,16 +1291,21 @@ p4est_mesh_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
     mesh->corner_corner = sc_array_new (sizeof (int8_t));
   }
 
+  mesh_iteration_t   *mesh_with_counter;
+
+  mesh_with_counter = P4EST_ALLOC_ZERO (mesh_iteration_t, 1);
+  mesh_with_counter->mesh = mesh;
   /* Call the forest iterator to collect face connectivity */
   p4est_iterate (p4est,         /* p4est */
                  ghost,         /* ghost layer */
-                 mesh,          /* user_data */
+                 mesh_with_counter,     /* user_data */
                  (do_volume ? mesh_iter_volume : NULL), mesh_iter_face,
 #ifdef P4_TO_P8
                  (do_edge ? mesh_iter_edge : NULL),
 #endif /* P4_TO_P8 */
                  (do_corner ? mesh_iter_corner : NULL));
 
+  P4EST_FREE (mesh_with_counter);
   return mesh;
 }
 
