@@ -164,6 +164,9 @@ decode_encoding (int enc, int n_entities, int l_same_size,
                  int u_double_size, int l_half_size, int u_half_size,
                  int *subquad, int *orientation, int *entity)
 {
+  int8_t              upper_bnd;
+  int                 e = enc;
+
   P4EST_ASSERT (u_same_size == l_double_size && u_double_size == l_half_size);
   P4EST_ASSERT (l_same_size == 0);
   P4EST_ASSERT (l_same_size < l_double_size);
@@ -171,7 +174,6 @@ decode_encoding (int enc, int n_entities, int l_same_size,
   P4EST_ASSERT (0 <= enc);
 
 #ifdef P4EST_ENABLE_DEBUG
-  int8_t              upper_bnd;
   if (n_entities == P4EST_FACES) {
     upper_bnd = P4EST_HALF;
   }
@@ -194,7 +196,6 @@ decode_encoding (int enc, int n_entities, int l_same_size,
     *subquad = -1;
   }
   else if (l_double_size <= enc && enc < u_double_size) {
-    int                 e = enc;
     e -= l_double_size;
     *subquad = e / l_double_size;
     e -= (l_double_size * *subquad);
@@ -206,7 +207,6 @@ decode_encoding (int enc, int n_entities, int l_same_size,
 #endif /* P4EST_ENABLE_DEBUG */
   }
   else if (l_half_size <= enc && enc < u_half_size) {
-    int                 e = enc;
     e -= l_half_size;
     *orientation = e / n_entities;
     *entity = e % n_entities;
@@ -513,6 +513,11 @@ int
 test_mesh_one_tree (p4est_t * p4est, p4est_connectivity_t * conn,
                     int8_t periodic, sc_MPI_Comm mpicomm)
 {
+  int                 minLevel = 3;
+  p4est_connect_type_t btype = P4EST_CONNECT_FULL;
+  p4est_ghost_t *ghost;
+  p4est_mesh_t *mesh;
+
   /* ensure that we have null pointers at beginning and end of function */
   P4EST_ASSERT (p4est == NULL);
   P4EST_ASSERT (conn == NULL);
@@ -534,23 +539,15 @@ test_mesh_one_tree (p4est_t * p4est, p4est_connectivity_t * conn,
   conn = periodic == 1 ? p8est_connectivity_new_periodic ()
     : p8est_connectivity_new_unitcube ();
 #endif /* !P4_TO_P8 */
+
   /* setup p4est */
-  int                 minLevel = 3;
   p4est = p4est_new_ext (mpicomm, conn, 0, minLevel, 0, 0, NULL, NULL);
-
-  /* create mesh */
-  p4est_connect_type_t btype;
-#ifdef P4_TO_P8
-  btype = P8EST_CONNECT_EDGE;
-#else /* P4_TO_P8 */
-  btype = P4EST_CONNECT_FULL;
-#endif /* P4_TO_P8 */
-
   p4est_balance (p4est, btype, NULL);
 
-  p4est_ghost_t      *ghost = p4est_ghost_new (p4est, btype);
-  p4est_mesh_t       *mesh =
-    p4est_mesh_new_ext (p4est, ghost, 1, 1, 0, btype);
+  /* create mesh */
+
+  ghost = p4est_ghost_new (p4est, btype);
+  mesh = p4est_mesh_new_ext (p4est, ghost, 1, 1, 0, btype);
 
   /* check mesh */
   check_bijectivity (p4est, ghost, mesh);
@@ -578,10 +575,15 @@ int
 test_mesh_two_trees (p4est_t * p4est, p4est_connectivity_t * conn,
                      sc_MPI_Comm mpicomm)
 {
+  int                 conn_face_tree1, conn_face_tree2, orientation;
+  int                 minLevel = 3;
+  p4est_connect_type_t btype = P4EST_CONNECT_FULL;
+  p4est_ghost_t *ghost;
+  p4est_mesh_t *mesh;
+
   /* ensure that we have null pointers at beginning and end of function */
   P4EST_ASSERT (p4est == NULL);
   P4EST_ASSERT (conn == NULL);
-  int                 conn_face_tree1, conn_face_tree2, orientation;
   for (conn_face_tree1 = 0; conn_face_tree1 < P4EST_FACES; ++conn_face_tree1) {
     for (conn_face_tree2 = 0; conn_face_tree2 < P4EST_FACES;
          ++conn_face_tree2) {
@@ -594,22 +596,13 @@ test_mesh_two_trees (p4est_t * p4est, p4est_connectivity_t * conn,
           p4est_connectivity_new_twotrees (conn_face_tree1, conn_face_tree2,
                                            orientation);
         /* setup p4est */
-        int                 minLevel = 3;
         p4est = p4est_new_ext (mpicomm, conn, 0, minLevel, 0, 0, NULL, NULL);
-
-        p4est_connect_type_t btype;
-#ifdef P4_TO_P8
-        btype = P8EST_CONNECT_EDGE;
-#else /* P4_TO_P8 */
-        btype = P4EST_CONNECT_FULL;
-#endif /* P4_TO_P8 */
 
         p4est_balance (p4est, btype, NULL);
 
         /* create mesh */
-        p4est_ghost_t      *ghost = p4est_ghost_new (p4est, btype);
-        p4est_mesh_t       *mesh =
-          p4est_mesh_new_ext (p4est, ghost, 1, 1, 0, btype);
+        ghost = p4est_ghost_new (p4est, btype);
+        mesh = p4est_mesh_new_ext (p4est, ghost, 1, 1, 0, btype);
 
         /* check mesh */
         check_bijectivity (p4est, ghost, mesh);
@@ -643,6 +636,11 @@ int
 test_mesh_multiple_trees_brick (p4est_t * p4est, p4est_connectivity_t * conn,
                                 int8_t periodic, sc_MPI_Comm mpicomm)
 {
+  int                 minLevel = 3;
+  p4est_connect_type_t btype = P4EST_CONNECT_FULL;
+  p4est_ghost_t      *ghost;
+  p4est_mesh_t       *mesh;
+
   /* ensure that we have null pointers at beginning and end of function */
   P4EST_ASSERT (p4est == NULL);
   P4EST_ASSERT (conn == NULL);
@@ -658,27 +656,19 @@ test_mesh_multiple_trees_brick (p4est_t * p4est, p4est_connectivity_t * conn,
 
   /* create connectivity */
 #ifndef P4_TO_P8
-  conn = p4est_connectivity_new_brick (2, 1, periodic, periodic);
+  conn = p4est_connectivity_new_brick (2, 2, periodic, periodic);
 #else /* !P4_TO_P8 */
-  conn = p8est_connectivity_new_brick (2, 1, 1, periodic, periodic, periodic);
+  conn = p8est_connectivity_new_brick (2, 2, 2, periodic, periodic, periodic);
 #endif /* !P4_TO_P8 */
+
+
   /* setup p4est */
-  int                 minLevel = 3;
   p4est = p4est_new_ext (mpicomm, conn, 0, minLevel, 0, 0, NULL, NULL);
-
-  p4est_connect_type_t btype;
-#ifdef P4_TO_P8
-  btype = P8EST_CONNECT_EDGE;
-#else /* P4_TO_P8 */
-  btype = P4EST_CONNECT_FULL;
-#endif /* P4_TO_P8 */
-
   p4est_balance (p4est, btype, NULL);
 
   /* create mesh */
-  p4est_ghost_t      *ghost = p4est_ghost_new (p4est, btype);
-  p4est_mesh_t       *mesh =
-    p4est_mesh_new_ext (p4est, ghost, 1, 1, 0, btype);
+  ghost = p4est_ghost_new (p4est, btype);
+  mesh = p4est_mesh_new_ext (p4est, ghost, 1, 1, 0, btype);
 
   /* check mesh */
   check_bijectivity (p4est, ghost, mesh);
@@ -697,7 +687,8 @@ test_mesh_multiple_trees_brick (p4est_t * p4est, p4est_connectivity_t * conn,
   return 0;
 }
 
-/* Function for testing p4est-mesh for multiple trees in a non-brick scenario
+/* Function for testing p4est-mesh for multiple trees in a non-brick
+ * scenario. Not used yet.
  *
  * \param [in] p4est     The forest.
  * \param [in] conn      The connectivity structure
@@ -721,6 +712,13 @@ main (int argc, char **argv)
   p4est_t            *p4est;
   p4est_connectivity_t *conn;
   int8_t              periodic_boundaries;
+  int                 test_single, test_two_trees;
+  int                 test_multi_brick, test_multi_non_brick;
+  test_single = 1;
+  test_two_trees = 1;
+  test_multi_brick = 1;
+  test_multi_non_brick = 0;
+
   /* initialize MPI */
   mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
@@ -733,13 +731,6 @@ main (int argc, char **argv)
   p4est_init (NULL, SC_LP_DEFAULT);
   p4est = 0;
   conn = 0;
-
-  int                 test_single, test_two_trees;
-  int                 test_multi_brick, test_multi_non_brick;
-  test_single = 1;
-  test_two_trees = 1;
-  test_multi_brick = 1;
-  test_multi_non_brick = 0;
 
   /* test both periodic and non-periodic boundaries */
   if (test_single) {
@@ -776,6 +767,7 @@ main (int argc, char **argv)
     test_mesh_multiple_trees_nonbrick (p4est, conn, periodic_boundaries,
                                        mpicomm);
   }
+
   /* exit */
   sc_finalize ();
   mpiret = sc_MPI_Finalize ();
