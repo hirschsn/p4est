@@ -515,8 +515,8 @@ test_mesh_one_tree (p4est_t * p4est, p4est_connectivity_t * conn,
 {
   int                 minLevel = 3;
   p4est_connect_type_t btype = P4EST_CONNECT_FULL;
-  p4est_ghost_t *ghost;
-  p4est_mesh_t *mesh;
+  p4est_ghost_t      *ghost;
+  p4est_mesh_t       *mesh;
 
   /* ensure that we have null pointers at beginning and end of function */
   P4EST_ASSERT (p4est == NULL);
@@ -578,8 +578,8 @@ test_mesh_two_trees (p4est_t * p4est, p4est_connectivity_t * conn,
   int                 conn_face_tree1, conn_face_tree2, orientation;
   int                 minLevel = 3;
   p4est_connect_type_t btype = P4EST_CONNECT_FULL;
-  p4est_ghost_t *ghost;
-  p4est_mesh_t *mesh;
+  p4est_ghost_t      *ghost;
+  p4est_mesh_t       *mesh;
 
   /* ensure that we have null pointers at beginning and end of function */
   P4EST_ASSERT (p4est == NULL);
@@ -624,6 +624,43 @@ test_mesh_two_trees (p4est_t * p4est, p4est_connectivity_t * conn,
   return 0;
 }
 
+/** Test that the reduction of the memory footprint for inter-tree edge and
+ * corner neighbors resembling intra-tree neighbors of same size works in a
+ * brick environment by creating a mesh of a regular p4est and checking that
+ * local_num_corners and local_num_edges are both 0.
+ *
+ * \param[in]    conn      A p4est brick connectivity.
+ * \param[in]    mpicomm   The MPI communicator.
+ */
+int
+test_inter_tree_memory_minimization (p4est_connectivity_t * conn,
+                                     sc_MPI_Comm mpicomm)
+{
+  int                 min_level = 3;
+  p4est_t            *p4est;
+  p4est_connect_type_t btype;
+  p4est_ghost_t      *ghost;
+  p4est_mesh_t       *mesh;
+
+  p4est = p4est_new_ext (mpicomm, conn, 0, min_level, 1, 0, NULL, NULL);
+
+  btype = P4EST_CONNECT_FULL;
+  ghost = p4est_ghost_new (p4est, btype);
+  mesh = p4est_mesh_new (p4est, ghost, btype);
+
+#ifdef P4_TO_P8
+  P4EST_ASSERT (mesh->local_num_edges == 0);
+#endif /* P4_TO_P8 */
+  P4EST_ASSERT (mesh->local_num_corners == 0);
+
+  /* cleanup */
+  p4est_ghost_destroy (ghost);
+  p4est_mesh_destroy (mesh);
+  p4est_destroy (p4est);
+
+  return 0;
+}
+
 /* Function for testing p4est-mesh for multiple trees in a brick scenario
  *
  * \param [in] p4est     The forest.
@@ -661,6 +698,8 @@ test_mesh_multiple_trees_brick (p4est_t * p4est, p4est_connectivity_t * conn,
   conn = p8est_connectivity_new_brick (2, 2, 2, periodic, periodic, periodic);
 #endif /* !P4_TO_P8 */
 
+  /* check that memory footprint is reduced */
+  test_inter_tree_memory_minimization (conn, mpicomm);
 
   /* setup p4est */
   p4est = p4est_new_ext (mpicomm, conn, 0, minLevel, 0, 0, NULL, NULL);
