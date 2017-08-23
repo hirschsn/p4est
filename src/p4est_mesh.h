@@ -45,8 +45,17 @@ SC_EXTERN_C_BEGIN;
  * \ref p4est_mesh_new_ext.
  * For each ghost quadrant, its owner rank is stored in ghost_to_proc.
  * For each level, an array of local quadrant numbers is stored in quad_level.
- * The quad_level array is NULL by default and can be enabled using
- * \ref p4est_mesh_new_ext.
+ * For ghost quadrants the same information is stored in ghost_level.
+ * Both quad_level array and ghost_level array are NULL by default and can be
+ * enabled using \ref p4est_mesh_new_ext.
+ *
+ * For each quadrant parallel_boundary stores if the respective quadrant is part
+ * of the process boundary. If the quadrant belongs to the boundary its index in
+ * p4est_ghost_t's mirrors array is stored, else -1.
+ * The reverse mapping from mirror index to quadrant index is stored in
+ * mirror_qid. This array has number of mirror cells entries.
+ * Both arrays are NULL by default and can be enabled using \ref
+ * p4est_mesh_new_ext.
  *
  * The quad_to_quad list stores one value for each local quadrant's face.
  * This value is in 0..local_num_quadrants-1 for local quadrants, or in
