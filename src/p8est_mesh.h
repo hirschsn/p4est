@@ -89,9 +89,13 @@ SC_EXTERN_C_BEGIN;
  * by the same convention as described for quad_to_quad above.  In this case,
  * the neighbor's matching edge number is always diagonally opposite,
  * that is, edge number ^ 3.
+ * The same storage and implicit encoding scheme is used for same-size
+ * inter-tree edge neighbors that resemble same-size intra-tree edge neighbors,
+ * i.e. exactly one edge neighbor having the diagonally opposite edge number.
  *
- * For half- and double-size and all inter-tree edge neighbors, the
- * quad_to_edge value is in
+ * For half- and double-size intra-tree edge neighbors and all inter-tree edge
+ * neighbors that do not resemble same-size intra-tree edges, the quad_to_edge
+ * value is in
  *    local_num_quadrants + local_num_ghosts + [0 .. local_num_edges - 1].
  * After subtracting the number of local and ghost quadrants,
  * it indexes into edge_offset, which encodes a group of edge neighbors.
@@ -121,6 +125,10 @@ SC_EXTERN_C_BEGIN;
  * per corner.  In this case, its index is encoded as described above for
  * quad_to_quad.  The neighbor's matching corner number is always diagonally
  * opposite, that is, corner number ^ 7.
+ * The same storage and implicit encoding scheme is used for same-size
+ * inter-tree corner neighbors that resemble intra-tree corner neighbors,
+ * i.e. exactly one corner neighbor having the diagonally opposite corner
+ * number.
  *
  * On the inside of an inter-tree face, we have precisely one corner neighbor.
  * If a corner is across an inter-tree edge or corner, then the number of
@@ -135,10 +143,6 @@ SC_EXTERN_C_BEGIN;
  * Corners with no diagonal neighbor at all are assigned the value -3.  This
  * only happens on the domain boundary, which is necessarily a tree boundary.
  * Corner-neighbors for face- and edge-hanging nodes are assigned the value -1.
- *
- * TODO: In case of an inter-tree neighbor relation in a brick-like
- *       situation (one same-size neighbor, diagonally opposite edge/corner),
- *       use the same encoding as for edges/corners within a tree.
  */
 typedef struct
 {

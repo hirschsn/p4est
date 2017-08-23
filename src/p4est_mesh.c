@@ -281,15 +281,22 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
   P4EST_ASSERT (0 <= (size_t) goodones && goodones < nAdjacentQuads);
 
   if (goodones > 0) {
-    /* Allocate and fill edge information in the mesh structure */
-    edgeid = mesh_edge_allocate (mesh, goodones, &pequad, &peedge);
-    /* "link" to arrays encoding inter-tree edge-neighborhood */
-    P4EST_ASSERT (mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] == -1);
-    mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] =
-      edgeid_offset + edgeid;
-    /* populate allocated memory */
-    memcpy (pequad, equads, goodones * sizeof (p4est_locidx_t));
-    memcpy (peedge, eedges, goodones * sizeof (int8_t));
+    /* save memory in case of same size inter-tree neighbor that is analog to an
+     * intra-tree situation: orientation 0 and eid1 ^ 3 == eid2 */
+    if (goodones == 1 && eedges[0] == (side1->edge ^ 3)) {
+      mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] = equads[0];
+    }
+    else {
+      /* Allocate and fill edge information in the mesh structure */
+      edgeid = mesh_edge_allocate (mesh, goodones, &pequad, &peedge);
+      /* "link" to arrays encoding inter-tree edge-neighborhood */
+      P4EST_ASSERT (mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] == -1);
+      mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] =
+        edgeid_offset + edgeid;
+      /* populate allocated memory */
+      memcpy (pequad, equads, goodones * sizeof (p4est_locidx_t));
+      memcpy (peedge, eedges, goodones * sizeof (int8_t));
+    }
   }
   else if (0 == goodones) {
     mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] = -3;
@@ -396,16 +403,23 @@ mesh_corner_process_inter_tree_corners (p4est_iter_corner_info_t * info,
   P4EST_ASSERT (0 <= (size_t) goodones && goodones < n_adjacent_quads);
 
   if (goodones > 0) {
-    /* Allocate and fill corner information in the mesh structure */
-    corner_id = mesh_corner_allocate (mesh, goodones, &pcquad, &pccorner);
-    /* "link" to arrays encoding inter-tree corner-neighborhood */
-    P4EST_ASSERT
-      (mesh->quad_to_corner[P4EST_CHILDREN * qid1 + side1->corner] == -1);
-    mesh->quad_to_corner[P4EST_CHILDREN * qid1 + side1->corner] =
-      cornerid_offset + corner_id;
-    /* populate allocated memory */
-    memcpy (pcquad, cquads, goodones * sizeof (p4est_locidx_t));
-    memcpy (pccorner, ccorners, goodones * sizeof (int8_t));
+    /* save memory in case of same size inter-tree neighbor that is analog to an
+     * intra-tree situation: orientation 0 and eid1 ^ 3 == eid2 */
+    if (goodones == 1 && ccorners[0] == (side1->corner ^ (P4EST_CHILDREN - 1))) {
+      mesh->quad_to_corner[P4EST_CHILDREN * qid1 + side1->corner] = cquads[0];
+    }
+    else {
+      /* Allocate and fill corner information in the mesh structure */
+      corner_id = mesh_corner_allocate (mesh, goodones, &pcquad, &pccorner);
+      /* "link" to arrays encoding inter-tree corner-neighborhood */
+      P4EST_ASSERT
+        (mesh->quad_to_corner[P4EST_CHILDREN * qid1 + side1->corner] == -1);
+      mesh->quad_to_corner[P4EST_CHILDREN * qid1 + side1->corner] =
+        cornerid_offset + corner_id;
+      /* populate allocated memory */
+      memcpy (pcquad, cquads, goodones * sizeof (p4est_locidx_t));
+      memcpy (pccorner, ccorners, goodones * sizeof (int8_t));
+    }
   }
   else if (0 == goodones) {
     mesh->quad_to_corner[P4EST_CHILDREN * qid1 + side1->corner] = -3;

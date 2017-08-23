@@ -90,8 +90,10 @@ SC_EXTERN_C_BEGIN;
  *
  * On the inside of an inter-tree face, we have precisely one corner neighbor.
  * If a corner is an inter-tree corner, then the number of corner neighbors
- * may be any non-negative number.  In both cases, the quad_to_corner value
- * is in
+ * may be any non-negative number.  If the inter-tree corner resembles an
+ * intra-tree corner, i.e. exactly one neighbor, diagonally opposite corner
+ * number, we use the intra-tree storage scheme.  In any other case, the
+ * quad_to_corner value is in
  *    local_num_quadrants + local_num_ghosts + [0 .. local_num_corners - 1].
  * After subtracting the number of local and ghost quadrants,
  * it indexes into corner_offset, which encodes a group of corner neighbors.
@@ -101,10 +103,6 @@ SC_EXTERN_C_BEGIN;
  * Corners with no diagonal neighbor at all are assigned the value -3.  This
  * only happens on the domain boundary, which is necessarily a tree boundary.
  * Corner-neighbors for hanging nodes are assigned the value -1.
- *
- * TODO: In case of an inter-tree corner neighbor relation in a brick-like
- *       situation (exactly one neighbor, diagonally opposite corner number),
- *       use the same encoding as for corners within a tree.
  */
 typedef struct
 {
