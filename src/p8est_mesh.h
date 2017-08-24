@@ -260,42 +260,20 @@ p8est_quadrant_t   *p8est_mesh_get_quadrant (p8est_t * p4est,
  *                                   0 ..  5 neighbor(-s) across f_i,
  *                                   6 .. 17 neighbor(-s) across e_{i-6}
  *                                  18 .. 25 neighbor(-s) across c_{i-18}
- * TODO: Allow any combination of empty output arrays.
  * \param [out] neighboring_quads  Array containing neighboring quad(-s)
- *                                 Needs to be empty, contains
- *                                 p4est_quadrant_t*. May be NULL, then \ref
- *                                 neighboring_qids must not be NULL.
+ *                                 Needs to be empty or NULL, contains
+ *                                 p4est_quadrant_t*.  If it is NULL, no quads
+ *                                 are collected.
  * \param [out] neighboring_encs   Array containing encodings for neighboring
- *                                 quads as described below
- *                                 Needs to be empty, contains int.
- * CAUTION: Note, that the encodings differ from the encodings saved in the
- *          mesh.
- * TODO: Encodings are the same as in p4est_mesh for all quadrants.
- * TODO: Ghosts can be encoded by returning the quad_to_quad convention in qid.
- *          Positive values are for local quadrants, negative values indicate
- *          ghost quadrants.
- *          Faces:     1 ..  24 => same size neighbor
- *                                 (r * 6 + nf) + 1; nf = 0 .. 5 face index;
- *                                 r = 0 .. 3 relative orientation
- *                    25 .. 120 => double size neighbor
- *                                 25 + h * 24 + r * 6 + nf; h = 0 .. 3 number
- *                                 of the subface; r, nf as above
- *                   121 .. 144 => half size neighbors
- *                                 121 + r * 6 + nf; r, nf as above
- *          Edges:     1 ..  24 => same size neighbor
- *                                 r * 12 + ne + 1; ne = 0 .. 11 edge index;
- *                                 r = 0 .. 1 relative orientation
- *                    25 ..  72 => double size neighbor
- *                                 25 + h * 24 + r * 12 + ne; h = 0 .. 1 number
- *                                 of the subedge; r, ne as above
- *                    73 ..  96 => half size neighbors
- *                                 73 + r * 12 + ne; r, ne as above
- *          Corners:   1 ..   8 => nc + 1; nc = 0 .. 7 corner index
+ *                                 quads as described for p4est_mesh_t.
+ *                                 Needs to be empty or NULL, contains int.  If
+ *                                 it is NULL, no encodings are collected.
  * \param [out] neighboring_qids   Array containing quadrant ids for neighboring
- *                                 quadrants. May be NULL, then no neighboring
- *                                 qids are collected.
- *                                 If non-NULL the array needs to be empty and
- *                                 will contain int.
+ *                                 quadrants as described for p4est_mesh_t, i.e.
+ *                                 ghost quadrant ids are encodes as
+ *                                 local_num_quadrants + ghost id.  Must be
+ *                                 empty or NULL.  If it is NULL, no qids are
+ *                                 collected.
  */
 p4est_locidx_t      p8est_mesh_get_neighbors (p8est_t * p4est,
                                               p8est_ghost_t * ghost,

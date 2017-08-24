@@ -214,36 +214,20 @@ p4est_quadrant_t   *p4est_mesh_get_quadrant (p4est_t * p4est,
  *                                 quadrants is encoded as follows:
  *                                  0 .. 3 neighbor(-s) across face i,
  *                                  4 .. 7 neighbor(-s) across corner i-4.
- * TODO: Allow any combination of empty output arrays.
- * \param [out] neighboring_quads  Array containing neighboring quad(-s).
- *                                 Needs to be empty on input, size of
- *                                 p4est_quadrant_t *.  May be NULL, then
- *                                 \b neighboring_qids must not be NULL.
- * \param [out] neighboring_qids   Array containing quadrant ids for neighboring
- *                                 quadrants. May be NULL, then no neighboring
- *                                 qids are collected.
- *                                 If non-NULL the array needs to be empty and
- *                                 will contain int.
- * CAUTION: Note, that the encodings differ from the encodings saved in the
- *          mesh.
- * TODO: Encodings are the same as in p4est_mesh for all quadrants.
- * TODO: Ghosts can be encoded by returning the quad_to_quad convention in qid.
- *          Positive values are for local quadrants, negative values indicate
- *          ghost quadrants.
- *          Faces:     1 ..   8 => same size neighbor
- *                                 (r * 4 + nf) + 1; nf = 0 .. 3 face index;
- *                                 r = 0 .. 1 relative orientation
- *                     9 ..  24 => double size neighbor
- *                                 9 + h * 8 + r * 4 + nf; h = 0 .. 1 number
- *                                 of the subface; r, nf as above
- *                    25 ..  32 => half-size neighbors
- *                                 25 + r * 4 + nf; r, nf as above
- *          Corners:   1 ..   4 => size not encoded for corners
- *                                 nc + 1; nc = 0 .. 3 corner index
+ * \param [out] neighboring_quads  Array containing neighboring quad(-s)
+ *                                 Needs to be empty or NULL, contains
+ *                                 p4est_quadrant_t*.  If it is NULL, no quads
+ *                                 are collected.
  * \param [out] neighboring_encs   Array containing encodings for neighboring
- *                                 quads.
- *                                 Needs to be empty, contains int.
- *
+ *                                 quads as described for p4est_mesh_t.
+ *                                 Needs to be empty or NULL, contains int.  If
+ *                                 it is NULL, no encodings are collected.
+ * \param [out] neighboring_qids   Array containing quadrant ids for neighboring
+ *                                 quadrants as described for p4est_mesh_t, i.e.
+ *                                 ghost quadrant ids are encodes as
+ *                                 local_num_quadrants + ghost id.  Must be
+ *                                 empty or NULL.  If it is NULL, no qids are
+ *                                 collected.
  */
 p4est_locidx_t      p4est_mesh_get_neighbors (p4est_t * p4est,
                                               p4est_ghost_t * ghost,
