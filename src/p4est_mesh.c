@@ -1435,6 +1435,8 @@ get_face_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
   p4est_quadrant_t  **quad_ins;
   p4est_quadrant_t   *quad;
   int                *int_ins;
+  p4est_locidx_t      quad_idx;
+  p4est_locidx_t     *quad_ptr;
 
 #ifdef P4_TO_P8
   l_same_size = 0;
@@ -1558,8 +1560,6 @@ get_face_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
   else if (l_half_size <= neighbor_encoding
            && neighbor_encoding < u_half_size) {
     /** half size neighbor: */
-    p4est_locidx_t      quad_idx;
-    p4est_locidx_t     *quad_ptr;
     quad_ptr =
       (p4est_locidx_t *) sc_array_index (mesh->quad_to_half, neighbor_idx);
     int                 nenc;
@@ -1644,6 +1644,8 @@ get_edge_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
   l_half_size = -24;
   u_half_size = l_same_size;
   int                 convEdge = -l_half_size + u_double_size;
+    p4est_locidx_t      n_adj_quads, offset;
+    p4est_locidx_t      quad_idx;
 
   neighbor_idx = mesh->quad_to_edge[P8EST_EDGES * curr_quad_id + (direction)];
 
@@ -1705,7 +1707,6 @@ get_edge_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
     /* normalize neighbor index */
     neighbor_idx -= (lq + gq);
     P4EST_ASSERT (0 <= neighbor_idx && neighbor_idx < mesh->local_num_edges);
-    p4est_locidx_t      n_adj_quads, offset;
 
     /* get offset and number of adjacent quads */
     offset = *((p4est_locidx_t *)
@@ -1714,7 +1715,6 @@ get_edge_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
                     sc_array_index_int (mesh->edge_offset,
                                         neighbor_idx + 1)) - offset;
 
-    p4est_locidx_t      quad_idx;
     for (i = 0; i < n_adj_quads; ++i) {
       is_ghost = 0;
       quad_idx = *((p4est_locidx_t *)
@@ -1831,6 +1831,8 @@ get_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
     p4est_mesh_get_quadrant (p4est, mesh, curr_quad_id);
 #endif /* P4EST_ENABLE_DEBUG */
   p4est_locidx_t      neighbor_idx, neighbor_encoding;
+  p4est_locidx_t      quad_idx;
+  p4est_locidx_t      n_adj_quads, offset;
   p4est_quadrant_t  **quad_ins;
   p4est_quadrant_t   *quad;
   int                *int_ins;
@@ -1924,7 +1926,6 @@ get_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
     neighbor_idx -= (lq + gq);
     P4EST_ASSERT (0 <= neighbor_idx
                   && neighbor_idx < mesh->local_num_corners);
-    p4est_locidx_t      n_adj_quads, offset;
 
     /* get offset and number of adjacent quads */
     offset = *((p4est_locidx_t *)
@@ -1933,7 +1934,6 @@ get_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
                     sc_array_index_int (mesh->corner_offset,
                                         neighbor_idx + 1)) - offset;
 
-    p4est_locidx_t      quad_idx;
     for (i = 0; i < n_adj_quads; ++i) {
       quad_idx = *((p4est_locidx_t *)
                    sc_array_index_int (mesh->corner_quad, offset + i));
@@ -2015,6 +2015,12 @@ p4est_mesh_get_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
                           sc_array_t * neighboring_encs,
                           sc_array_t * neighboring_qids)
 {
+#ifndef P4_TO_P8
+  p4est_locidx_t      lFace, uFace, lCorner, uCorner;
+#else /* !P4_TO_P8 */
+  p4est_locidx_t      lFace, uFace, lEdge, uEdge, lCorner, uCorner;
+#endif /* !P4_TO_P8 */
+
 #ifdef P4EST_ENABLE_DEBUG
   p4est_locidx_t      lq = mesh->local_num_quadrants;
 
@@ -2042,7 +2048,7 @@ p4est_mesh_get_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
   /*  mesh has to be created, i.e. not NULL, */
   P4EST_ASSERT (mesh != NULL);
   /*  curr_quad_id must be part of the processors quadrants, */
-  P4EST_ASSERT (curr_quad_id < lq);
+  P4EST_ASSERT (0 <= curr_quad_id && curr_quad_id < lq);
 
   switch (ghost->btype) {
   case P4EST_CONNECT_FACE:
@@ -2074,16 +2080,12 @@ p4est_mesh_get_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
   }
 #endif /* P4EST_ENABLE_DEBUG */
 
-  /* tools for decoding direction */
+  /* decode direction to know which sub-neighbor search to query */
 #ifndef P4_TO_P8
-  p4est_locidx_t      lFace, uFace, lCorner, uCorner;
-
   lFace = 0;
   uFace = lCorner = P4EST_FACES;
   uCorner = P4EST_FACES + P4EST_CHILDREN;
 #else /* !P4_TO_P8 */
-  p4est_locidx_t      lFace, uFace, lEdge, uEdge, lCorner, uCorner;
-
   lFace = 0;
   uFace = lEdge = P4EST_FACES;
   uEdge = lCorner = lEdge + P8EST_EDGES;
