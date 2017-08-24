@@ -157,6 +157,9 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
   p4est_locidx_t     *equads;
   int8_t             *peedge;
   p4est_locidx_t     *pequad;
+  int8_t              subEdgeIdx;
+  int                 pos;
+  int                 goodones = 0;
   int                 edgeid_offset =
     mesh->local_num_quadrants + mesh->ghost_num_quadrants;
 
@@ -192,7 +195,6 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
   P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
 
   /* Go through edge neighbors and collect the true edges */
-  int                 goodones = 0;
   for (iz = 0; iz < cz; ++iz) {
     if (iz == zz) {
       /* We do not count ourselves as a neighbor */
@@ -224,7 +226,7 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
       if (side1->is_hanging && side2->is_hanging) {
         /* both sides are hanging; only store the one that shares
          * the same part of the the half edge */
-        int8_t              subEdgeIdx = (subedge_id + localOri) % 2;
+        subEdgeIdx = (subedge_id + localOri) % 2;
         qid2 =
           side2->is.hanging.quadid[subEdgeIdx] +
           (side2->is.hanging.is_ghost[subEdgeIdx] ?
@@ -239,7 +241,7 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
          * to corner of edge with lower corner index
          */
         for (j = 0; j < 2; ++j) {
-          int                 pos = (localOri + j) % 2;
+          pos = (localOri + j) % 2;
           qid2 =
             side2->is.hanging.quadid[pos] +
             (side2->is.hanging.is_ghost[pos] ?
@@ -259,7 +261,7 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
           (side2->is.full.is_ghost ?
            mesh->local_num_quadrants : tree2->quadrants_offset);
         /* update mesh */
-        int                 pos = (localOri + subedge_id) % 2;
+        pos = (localOri + subedge_id) % 2;
         equads[goodones] = qid2;
         eedges[goodones] =
           24 + 24 * pos + P8EST_EDGES * localOri + side2->edge;
@@ -290,7 +292,8 @@ mesh_edge_process_inter_tree_edges (p8est_iter_edge_info_t * info,
       /* Allocate and fill edge information in the mesh structure */
       edgeid = mesh_edge_allocate (mesh, goodones, &pequad, &peedge);
       /* "link" to arrays encoding inter-tree edge-neighborhood */
-      P4EST_ASSERT (mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] == -1);
+      P4EST_ASSERT (mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] ==
+                    -1);
       mesh->quad_to_edge[P8EST_EDGES * qid1 + side1->edge] =
         edgeid_offset + edgeid;
       /* populate allocated memory */
@@ -331,6 +334,7 @@ mesh_corner_process_inter_tree_corners (p4est_iter_corner_info_t * info,
   p4est_locidx_t     *cquads;
   int8_t             *pccorner;
   p4est_locidx_t     *pcquad;
+  int                 goodones = 0;
   int                 cornerid_offset =
     mesh->local_num_quadrants + mesh->ghost_num_quadrants;
 
@@ -353,7 +357,6 @@ mesh_corner_process_inter_tree_corners (p4est_iter_corner_info_t * info,
   P4EST_ASSERT (0 <= qid1 && qid1 < mesh->local_num_quadrants);
 
   /* Go through corner neighbors and collect the true corners */
-  int                 goodones = 0;
   for (iz = 0; iz < cz; ++iz) {
     if (iz == zz) {
       /* We do not count ourselves as a neighbor */
@@ -405,7 +408,8 @@ mesh_corner_process_inter_tree_corners (p4est_iter_corner_info_t * info,
   if (goodones > 0) {
     /* save memory in case of same size inter-tree neighbor that is analog to an
      * intra-tree situation: orientation 0 and eid1 ^ 3 == eid2 */
-    if (goodones == 1 && ccorners[0] == (side1->corner ^ (P4EST_CHILDREN - 1))) {
+    if (goodones == 1
+        && ccorners[0] == (side1->corner ^ (P4EST_CHILDREN - 1))) {
       mesh->quad_to_corner[P4EST_CHILDREN * qid1 + side1->corner] = cquads[0];
     }
     else {
@@ -550,6 +554,9 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
   p4est_mesh_t       *mesh = ((mesh_iteration_t *) user_data)->mesh;
   p8est_iter_edge_side_t *side1, *side2, *tempside;
   p4est_tree_t       *tree1;
+  int8_t             *eedges;
+  int8_t             *peedge;
+  p4est_locidx_t     *pequad;
 
   edgeid_offset = mesh->local_num_quadrants + mesh->ghost_num_quadrants;
 
@@ -670,9 +677,6 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
 
     /* intra-tree */
     else {
-      int8_t             *peedge;
-      p4est_locidx_t     *pequad;
-
       P4EST_ASSERT (!info->tree_boundary);
 
       side1 = (p8est_iter_edge_side_t *) sc_array_index (&info->sides, 0);
@@ -822,7 +826,6 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
               in_qtoe = P8EST_EDGES * qid1 + side1->edge;
 
               /* allocate space for encodings */
-              int8_t             *eedges;
               eedges = P4EST_ALLOC (int8_t, 2);
 
               /* assert there is no entry for this cell yet */
@@ -925,6 +928,7 @@ mesh_iter_face (p4est_iter_face_info_t * info, void *user_data)
 {
   int                 h;
   int                 swapsides;
+  int                 pos;
   p4est_mesh_t       *mesh = ((mesh_iteration_t *) user_data)->mesh;
   p4est_locidx_t      jl, jl2, jls[P4EST_HALF];
   p4est_locidx_t      in_qtoq, halfindex;
@@ -1029,9 +1033,10 @@ mesh_iter_face (p4est_iter_face_info_t * info, void *user_data)
 
       /* determine quadrant numbers for all hanging faces */
       for (h = 0; h < P4EST_HALF; ++h) {
-        int                 pos =
-          p4est_connectivity_face_neighbor_face_corner
-          (h, side->face, side2->face, info->orientation);
+        pos =
+          p4est_connectivity_face_neighbor_face_corner (h, side->face,
+                                                        side2->face,
+                                                        info->orientation);
         if (side->is.full.is_ghost && side2->is.hanging.is_ghost[pos]) {
           continue;
         }
@@ -1064,9 +1069,10 @@ mesh_iter_face (p4est_iter_face_info_t * info, void *user_data)
         }
       }
       for (h = 0; h < P4EST_HALF; ++h) {
-        int                 pos =
-          p4est_connectivity_face_neighbor_face_corner
-          (h, side->face, side2->face, info->orientation);
+        pos =
+          p4est_connectivity_face_neighbor_face_corner (h, side->face,
+                                                        side2->face,
+                                                        info->orientation);
 
         if (!side2->is.hanging.is_ghost[pos]) {
           in_qtoq = P4EST_FACES * jls[h] + side2->face;
@@ -1211,6 +1217,7 @@ p4est_mesh_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
   p4est_locidx_t     *insert;
   p4est_mesh_t       *mesh;
   p4est_quadrant_t   *q;
+  mesh_iteration_t   *mesh_with_counter;
 
   /* check whether input condition for p4est is met */
   P4EST_ASSERT (p4est_is_balanced (p4est, btype));
@@ -1318,8 +1325,6 @@ p4est_mesh_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
     mesh->corner_quad = sc_array_new (sizeof (p4est_locidx_t));
     mesh->corner_corner = sc_array_new (sizeof (int8_t));
   }
-
-  mesh_iteration_t   *mesh_with_counter;
 
   mesh_with_counter = P4EST_ALLOC_ZERO (mesh_iteration_t, 1);
   mesh_with_counter->mesh = mesh;
@@ -1644,8 +1649,8 @@ get_edge_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
   l_half_size = -24;
   u_half_size = l_same_size;
   int                 convEdge = -l_half_size + u_double_size;
-    p4est_locidx_t      n_adj_quads, offset;
-    p4est_locidx_t      quad_idx;
+  p4est_locidx_t      n_adj_quads, offset;
+  p4est_locidx_t      quad_idx;
 
   neighbor_idx = mesh->quad_to_edge[P8EST_EDGES * curr_quad_id + (direction)];
 
