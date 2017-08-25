@@ -35,7 +35,6 @@
 
 /** Set constants needed to decode an encoding obtained from \ref
  * p4est_mesh_get_neighbors
- * CAUTION: Encoding needs to be normalized to 0 (done by (abs(enc) - 1)).
  * \param [in]      direction             Encoded direction for neighbor search
  *                                        analog to direction used in
  *                                        \ref p4est_mesh_get_neighbors
@@ -68,18 +67,19 @@ set_limits (int direction, p4est_connect_type_t btype,
 #ifndef P4_TO_P8
   if (0 <= direction && direction < P4EST_FACES) {
     *l_same_size = 0;
-    *u_same_size = *l_double_size = 8;
-    *u_double_size = *l_half_size = 24;
-    *u_half_size = 32;
+    *u_same_size = 2 * P4EST_FACES;
+    *l_double_size = *u_same_size;
+    *u_double_size = 24;
+    *l_half_size = -8;
+    *u_half_size = *l_same_size;
     *n_neighbor_entities = P4EST_FACES;
     *n_hanging_quads = P4EST_HALF;
   }
   else if (P4EST_FACES <= direction &&
            direction < (P4EST_FACES + P4EST_CHILDREN)) {
     P4EST_ASSERT (btype == P4EST_CONNECT_CORNER);
-    *l_same_size = 0;
-    *u_same_size = 4;
-    *l_double_size = *u_double_size = *l_half_size = *u_half_size = 4;
+    *l_half_size = *u_half_size = *l_same_size = 0;
+    *u_same_size = *l_double_size = *u_double_size = P4EST_CHILDREN;
     *n_neighbor_entities = P4EST_CHILDREN;
     *n_hanging_quads = 1;
   }
@@ -89,9 +89,11 @@ set_limits (int direction, p4est_connect_type_t btype,
 #else /* !P4_TO_P8 */
   if (0 <= direction && direction < P4EST_FACES) {
     *l_same_size = 0;
-    *u_same_size = *l_double_size = 24;
-    *u_double_size = *l_half_size = 120;
-    *u_half_size = 144;
+    *u_same_size = 4 * P4EST_FACES;
+    *l_double_size = *u_same_size;
+    *u_double_size = 120;
+    *l_half_size = -24;
+    *u_half_size = *l_same_size;
     *n_neighbor_entities = P4EST_FACES;
     *n_hanging_quads = P4EST_HALF;
   }
@@ -99,18 +101,19 @@ set_limits (int direction, p4est_connect_type_t btype,
            direction < (P4EST_FACES + P8EST_EDGES)) {
     P4EST_ASSERT (btype >= P8EST_CONNECT_EDGE);
     *l_same_size = 0;
-    *u_same_size = *l_double_size = 24;
-    *u_double_size = *l_half_size = 72;
-    *u_half_size = 96;
+    *u_same_size = 2 * P8EST_EDGES;
+    *l_double_size = *u_same_size;
+    *u_double_size = 72;
+    *l_half_size = -24;
+    *u_half_size = *l_same_size;
     *n_neighbor_entities = P8EST_EDGES;
     *n_hanging_quads = 2;
   }
   else if ((P4EST_FACES + P8EST_EDGES) <= direction &&
            direction < (P4EST_FACES + P8EST_EDGES + P4EST_CHILDREN)) {
     P4EST_ASSERT (btype == P4EST_CONNECT_CORNER);
-    *l_same_size = 0;
-    *u_same_size = 8;
-    *l_double_size = *u_double_size = *l_half_size = *u_half_size = 8;
+    *l_half_size = *u_half_size = *l_same_size = 0;
+    *u_same_size = *l_double_size = *u_double_size = P4EST_CHILDREN;
     *n_neighbor_entities = P4EST_CHILDREN;
     *n_hanging_quads = 1;
   }
@@ -167,11 +170,10 @@ decode_encoding (int enc, int n_entities, int l_same_size,
   int8_t              upper_bnd;
   int                 e = enc;
 
-  P4EST_ASSERT (u_same_size == l_double_size && u_double_size == l_half_size);
-  P4EST_ASSERT (l_same_size == 0);
+  P4EST_ASSERT ((u_half_size == l_same_size) && (l_same_size == 0));
+  P4EST_ASSERT (u_same_size == l_double_size);
+  P4EST_ASSERT (l_half_size <= l_same_size);
   P4EST_ASSERT (l_same_size < l_double_size);
-  P4EST_ASSERT (l_double_size <= l_half_size);
-  P4EST_ASSERT (0 <= enc);
 
 #ifdef P4EST_ENABLE_DEBUG
   if (n_entities == P4EST_FACES) {
@@ -231,6 +233,7 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
   int                 quad, norm_quad;
   int                 i, imax, iinv, j, k;
   int                 dir;
+  int                 lq = p4est->local_num_quadrants;
   int                 n_neighbor_entities, n_hanging_quads;
   int                 l_same_size, u_same_size;
   int                 l_double_size, u_double_size;
@@ -284,6 +287,8 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
         quad < p4est->global_first_quadrant[p4est->mpirank + 1]) {
       /** norm global quad index to local index */
       norm_quad = quad - p4est->global_first_quadrant[p4est->mpirank];
+      /**(quadrant must be local by design) */
+      P4EST_ASSERT (0 <= norm_quad && norm_quad < lq);
 
       for (i = 0; i < imax; ++i) {
         /** empty containers */
@@ -341,9 +346,8 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
           neighbor_enc = *(int *) sc_array_index (neighboring_encs, j);
 
           /** we can only search neighbors of local quadrants */
-          if (neighbor_enc < 0) {
-            if (l_half_size <= -1 - neighbor_enc &&
-                -1 - neighbor_enc < u_half_size) {
+          if (lq <= neighbor_qid) {
+            if (l_half_size <= neighbor_enc && neighbor_enc < u_half_size) {
               neighbor_sub_ctr = (neighbor_sub_ctr + 1) % n_hanging_quads;
             }
             continue;
@@ -351,7 +355,6 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
 
           /** normalize encoding before decoding (abs not necessary, because
               quadrant must be local) */
-          --neighbor_enc;
           decode_encoding (neighbor_enc, n_neighbor_entities, l_same_size,
                            u_same_size, l_double_size, u_double_size,
                            l_half_size, u_half_size, &neighbor_subquad,
@@ -376,10 +379,7 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
             for (k = 0; k < (int) found_quads->elem_count; ++k) {
               found_qid = *(int *) sc_array_index (found_qids, k);
               found_enc = *(int *) sc_array_index (found_encs, k);
-              if (found_qid == norm_quad && 0 < found_enc) {
-                /** normalize encoding before decoding (abs not necessary,
-                    because quadrant must be local by design) */
-                --found_enc;
+              if (found_qid == norm_quad) {
                 decode_encoding (found_enc, n_neighbor_entities, l_same_size,
                                  u_same_size, l_double_size, u_double_size,
                                  l_half_size, u_half_size, &found_subquad,
@@ -413,10 +413,7 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
               found_qid = *(int *) sc_array_index (found_qids, k);
               found_enc = *(int *) sc_array_index (found_encs, k);
 
-              if (found_qid == norm_quad && 0 < found_enc) {
-                /** normalize encoding before decoding (abs not necessary,
-                    because quadrant must be local by design) */
-                --found_enc;
+              if (found_qid == norm_quad) {
                 decode_encoding (found_enc, n_neighbor_entities, l_same_size,
                                  u_same_size, l_double_size, u_double_size,
                                  l_half_size, u_half_size, &found_subquad,
@@ -434,11 +431,7 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
               else {
                 /** hanging quads are stored contiguous in memory, such that we
                  * can cope with multiple adjacent trees */
-                int                 temp_enc =
-                  *(int *) sc_array_index (found_encs, k);
-                temp_enc = abs (temp_enc) - 1;
-
-                if (l_half_size <= temp_enc && temp_enc < u_half_size) {
+                if (l_half_size <= found_enc && found_enc < u_half_size) {
                   found_sub_ctr = (found_sub_ctr + 1) % n_hanging_quads;
                 }
                 else {
@@ -464,10 +457,9 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
               found_qid = *(int *) sc_array_index (found_qids, k);
               found_enc = *(int *) sc_array_index (found_encs, k);
 
-              if (found_qid == norm_quad && 0 < found_enc) {
+              if (found_qid == norm_quad) {
                 /** normalize encoding before decoding (abs not necessary,
                     because quadrant must be local by design) */
-                --found_enc;
                 decode_encoding (found_enc, n_neighbor_entities, l_same_size,
                                  u_same_size, l_double_size, u_double_size,
                                  l_half_size, u_half_size, &found_subquad,
