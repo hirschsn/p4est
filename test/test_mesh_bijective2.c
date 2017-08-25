@@ -514,14 +514,8 @@ test_mesh_one_tree (p4est_t * p4est, p4est_connectivity_t * conn,
   P4EST_ASSERT (p4est == NULL);
   P4EST_ASSERT (conn == NULL);
 
-  if (periodic) {
-    P4EST_VERBOSEF ("Check if get_neighbors is bijective for single tree,"
-                    " periodic\n");
-  }
-  else {
-    P4EST_VERBOSEF ("Check if get_neighbors is bijective for single tree,"
-                    " non-periodic\n");
-  }
+  P4EST_VERBOSEF ("Check if get_neighbors is bijective for single tree,"
+                  " periodic %i\n", periodic);
 
   /* create connectivity */
 #ifndef P4_TO_P8
@@ -674,14 +668,8 @@ test_mesh_multiple_trees_brick (p4est_t * p4est, p4est_connectivity_t * conn,
   P4EST_ASSERT (p4est == NULL);
   P4EST_ASSERT (conn == NULL);
 
-  if (periodic) {
-    P4EST_VERBOSEF ("Check if get_neighbors is bijective for brick of trees,"
-                    " periodic\n");
-  }
-  else {
-    P4EST_VERBOSEF ("Check if get_neighbors is bijective for brick of trees,"
-                    " non-periodic\n");
-  }
+  P4EST_VERBOSEF ("Check if get_neighbors is bijective for brick of trees,"
+                  " periodic %i\n", periodic);
 
   /* create connectivity */
 #ifndef P4_TO_P8
