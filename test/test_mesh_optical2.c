@@ -22,6 +22,7 @@
 */
 #include <unistd.h>
 #include <inttypes.h>
+
 #ifndef P4_TO_P8
 #include <p4est_extended.h>
 #include <p4est_ghost.h>
@@ -100,7 +101,10 @@ test_mesh_collect_markers (p4est_iter_volume_info_t * info, void *user_data)
 static int
 test_mesh_write_vtk (p4est_t * p4est, char *filename)
 {
+  int                 retval;
+  p4est_vtk_context_t *context = p4est_vtk_context_new (p4est, filename);
   sc_array_t         *marks;
+
   marks = sc_array_new_size (sizeof (double), p4est->local_num_quadrants);
 
   p4est_iterate (p4est, NULL, (void *) marks, test_mesh_collect_markers, NULL,
@@ -110,7 +114,6 @@ test_mesh_write_vtk (p4est_t * p4est, char *filename)
                  NULL);
 
   /* create VTK output context and set its parameters */
-  p4est_vtk_context_t *context = p4est_vtk_context_new (p4est, filename);
   p4est_vtk_context_set_scale (context, 1);     /* quadrant at almost full scale */
 
   /* begin writing the output files */
@@ -129,7 +132,7 @@ test_mesh_write_vtk (p4est_t * p4est, char *filename)
   SC_CHECK_ABORT (context != NULL,
                   P4EST_STRING "_vtk: Error writing cell data");
 
-  const int           retval = p4est_vtk_write_footer (context);
+  retval = p4est_vtk_write_footer (context);
   SC_CHECK_ABORT (!retval, P4EST_STRING "_vtk: Error writing footer");
 
   sc_array_destroy (marks);
@@ -173,12 +176,18 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
 #ifdef P4_TO_P8
   int                 printEdges = 1;
 #endif /* P4_TO_P8 */
-  int                 printCorners = 0;
+  int                 printCorners = 1;
   int                 direction = 0;
-  int                 encoding;
   uint32_t            norm_quad;
   uint32_t            quad, i;
+  int                 neighbor_qid;
   int                 j;
+  int                 lq = mesh->local_num_quadrants;
+  int                 gq = mesh->ghost_num_quadrants;
+  p4est_quadrant_t   *q;
+  char                filename[120];
+  test_mesh_marker_t *marker;
+  sc_array_t         *neighboring_quads, *neighboring_qids;
 #ifdef P4_TO_P8
   int                 dir_offset_edge, dir_offset_corner;
   dir_offset_edge = P4EST_FACES;
@@ -188,6 +197,8 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
   dir_offset_corner = P4EST_FACES;
 #endif /* P4_TO_P8 */
 
+  neighboring_quads = sc_array_new (sizeof (p4est_quadrant_t *));
+  neighboring_qids = sc_array_new (sizeof (int));
   for (quad = 0; quad < p4est->global_num_quadrants; ++quad) {
     sc_MPI_Barrier (p4est->mpicomm);
     /* loop over all cells, set and unset only if cell is owned by processor */
@@ -200,118 +211,96 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
       /* set */
       if (printFaces) {
         for (i = 0; i < P4EST_FACES; ++i) {
+          sc_array_truncate (neighboring_quads);
+          sc_array_truncate (neighboring_qids);
           direction = i;
-          sc_array_t         *neighboring_quads, *neighboring_encs;
-          sc_array_t         *neighboring_qids;
-          neighboring_quads = sc_array_new (sizeof (p4est_quadrant_t *));
-          neighboring_encs = sc_array_new (sizeof (int));
-          neighboring_qids = sc_array_new (sizeof (int));
-          p4est_mesh_get_neighbors (p4est, ghost, mesh, norm_quad,
-                                    direction, neighboring_quads,
-                                    neighboring_encs, neighboring_qids);
+          p4est_mesh_get_neighbors (p4est, ghost, mesh, norm_quad, direction,
+                                    neighboring_quads, NULL,
+                                    neighboring_qids);
 
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
           /* print some debug info */
           printf ("rank %5i, local quad %5i, global quad %5i, direction: %2i,"
                   " number of neighboring cells: %zu\n",
                   p4est->mpirank, quad, norm_quad, direction,
                   neighboring_quads->elem_count);
-#endif /* P4EST_DEBUG */
+#endif /* P4EST_ENABLE_DEBUG */
 
-          for (j = 0; j < neighboring_quads->elem_count; ++j) {
-            p4est_quadrant_t   *q =
-              *(p4est_quadrant_t **) sc_array_index_int (neighboring_quads,
-                                                         j);
-            encoding = *(int *) sc_array_index_int (neighboring_encs, j);
-            if (encoding > 0) {
-              test_mesh_marker_t *marker = (test_mesh_marker_t *)
-                q->p.user_data;
+          for (j = 0; j < (int) neighboring_quads->elem_count; ++j) {
+            q = *(p4est_quadrant_t **) sc_array_index_int (neighboring_quads,
+                                                           j);
+            neighbor_qid = *(int *) sc_array_index (neighboring_qids, j);
+            P4EST_ASSERT (0 <= neighbor_qid && neighbor_qid < (lq + gq));
+            if (0 <= neighbor_qid && neighbor_qid < lq) {
+              marker = (test_mesh_marker_t *) q->p.user_data;
               marker->marker = (double) direction;
             }
           }
-          sc_array_destroy (neighboring_quads);
-          sc_array_destroy (neighboring_encs);
-          sc_array_destroy (neighboring_qids);
         }
       }
 #ifdef P4_TO_P8
       if (printEdges) {
         for (i = 0; i < P8EST_EDGES; ++i) {
           direction = dir_offset_edge + i;
-          sc_array_t         *neighboring_quads, *neighboring_encs;
-          sc_array_t         *neighboring_qids;
-          neighboring_quads = sc_array_new (sizeof (p4est_quadrant_t *));
-          neighboring_encs = sc_array_new (sizeof (int));
-          neighboring_qids = sc_array_new (sizeof (int));
-          p4est_mesh_get_neighbors (p4est, ghost, mesh, norm_quad,
-                                    direction, neighboring_quads,
-                                    neighboring_encs, neighboring_qids);
+          sc_array_truncate (neighboring_quads);
+          sc_array_truncate (neighboring_qids);
+          p4est_mesh_get_neighbors (p4est, ghost, mesh, norm_quad, direction,
+                                    neighboring_quads, NULL,
+                                    neighboring_qids);
 
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
           /* print some debug info */
           printf ("rank %5i, local quad %5i, global quad %5i, direction: %2i,"
                   " number of neighboring cells: %zu\n",
                   p4est->mpirank, quad, norm_quad, direction,
                   neighboring_quads->elem_count);
-#endif /* P4EST_DEBUG */
+#endif /* P4EST_ENABLE_DEBUG */
 
-          for (j = 0; j < neighboring_quads->elem_count; ++j) {
-            p4est_quadrant_t   *q =
-              *(p4est_quadrant_t **) sc_array_index_int (neighboring_quads,
-                                                         j);
-            encoding = *(int *) sc_array_index_int (neighboring_encs, j);
-            if (encoding > 0) {
-              test_mesh_marker_t *marker = (test_mesh_marker_t *)
-                q->p.user_data;
+          for (j = 0; j < (int) neighboring_quads->elem_count; ++j) {
+            q = *(p4est_quadrant_t **) sc_array_index_int (neighboring_quads,
+                                                           j);
+            neighbor_qid = *(int *) sc_array_index (neighboring_qids, j);
+            P4EST_ASSERT (0 <= neighbor_qid && neighbor_qid < (lq + gq));
+            if (0 <= neighbor_qid && neighbor_qid < lq) {
+              marker = (test_mesh_marker_t *) q->p.user_data;
               marker->marker = (double) direction;
             }
           }
-          sc_array_destroy (neighboring_quads);
-          sc_array_destroy (neighboring_encs);
-          sc_array_destroy (neighboring_qids);
         }
       }
 #endif /* P4_TO_P8 */
       if (printCorners) {
         for (i = 0; i < P4EST_CHILDREN; ++i) {
           direction = dir_offset_corner + i;
-          sc_array_t         *neighboring_quads, *neighboring_encs;
-          sc_array_t         *neighboring_qids;
-          neighboring_quads = sc_array_new (sizeof (p4est_quadrant_t *));
-          neighboring_encs = sc_array_new (sizeof (int));
-          neighboring_qids = sc_array_new (sizeof (int));
-          p4est_mesh_get_neighbors (p4est, ghost, mesh, norm_quad,
-                                    direction, neighboring_quads,
-                                    neighboring_encs, neighboring_qids);
+          sc_array_truncate (neighboring_quads);
+          sc_array_truncate (neighboring_qids);
+          p4est_mesh_get_neighbors (p4est, ghost, mesh, norm_quad, direction,
+                                    neighboring_quads, NULL,
+                                    neighboring_qids);
 
-#ifdef P4EST_DEBUG
+#ifdef P4EST_ENABLE_DEBUG
           /* print some debug info */
           printf ("rank %5i, local quad %5i, global quad %5i, direction: %2i,"
                   " number of neighboring cells: %zu\n",
                   p4est->mpirank, quad, norm_quad, direction,
                   neighboring_quads->elem_count);
-#endif /* P4EST_DEBUG */
+#endif /* P4EST_ENABLE_DEBUG */
 
-          for (j = 0; j < neighboring_quads->elem_count; ++j) {
-            p4est_quadrant_t   *q =
-              *(p4est_quadrant_t **) sc_array_index_int (neighboring_quads,
-                                                         j);
-            encoding = *(int *) sc_array_index_int (neighboring_encs, j);
-            if (encoding > 0) {
-              test_mesh_marker_t *marker = (test_mesh_marker_t *)
-                q->p.user_data;
+          for (j = 0; j < (int) neighboring_quads->elem_count; ++j) {
+            q = *(p4est_quadrant_t **) sc_array_index_int (neighboring_quads,
+                                                           j);
+            neighbor_qid = *(int *) sc_array_index (neighboring_qids, j);
+            P4EST_ASSERT (0 <= neighbor_qid && neighbor_qid < (lq + gq));
+            if (0 <= neighbor_qid && neighbor_qid < lq) {
+              marker = (test_mesh_marker_t *) q->p.user_data;
               marker->marker = (double) direction;
             }
           }
-          sc_array_destroy (neighboring_quads);
-          sc_array_destroy (neighboring_encs);
-          sc_array_destroy (neighboring_qids);
         }
       }
     }
 
     /* write vtk output */
-    char                filename[120];
     sprintf (filename, "%s_test_mesh_%s_neighbors_quad_%i", P4EST_STRING,
              scenario, quad);
 
@@ -323,90 +312,72 @@ check_mesh (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
       if (printFaces) {
         for (i = 0; i < P4EST_FACES; ++i) {
           direction = i;
-          sc_array_t         *neighboring_quads, *neighboring_encs;
-          sc_array_t         *neighboring_qids;
-          neighboring_quads = sc_array_new (sizeof (p4est_quadrant_t *));
-          neighboring_encs = sc_array_new (sizeof (int));
-          neighboring_qids = sc_array_new (sizeof (int));
-          p4est_mesh_get_neighbors (p4est, ghost, mesh, norm_quad,
-                                    direction, neighboring_quads,
-                                    neighboring_encs, neighboring_qids);
-          for (j = 0; j < neighboring_quads->elem_count; ++j) {
-            p4est_quadrant_t   *q =
-              *(p4est_quadrant_t **) sc_array_index_int (neighboring_quads,
-                                                         j);
-            encoding = *(int *) sc_array_index_int (neighboring_encs, j);
-            if (encoding > 0) {
-              test_mesh_marker_t *marker =
-                (test_mesh_marker_t *) q->p.user_data;
+          sc_array_truncate (neighboring_quads);
+          sc_array_truncate (neighboring_qids);
+          p4est_mesh_get_neighbors (p4est, ghost, mesh, norm_quad, direction,
+                                    neighboring_quads, NULL,
+                                    neighboring_qids);
+
+          for (j = 0; j < (int) neighboring_quads->elem_count; ++j) {
+            q = *(p4est_quadrant_t **) sc_array_index_int (neighboring_quads,
+                                                           j);
+            neighbor_qid = *(int *) sc_array_index (neighboring_qids, j);
+            P4EST_ASSERT (0 <= neighbor_qid && neighbor_qid < (lq + gq));
+            if (0 <= neighbor_qid && neighbor_qid < lq) {
+              marker = (test_mesh_marker_t *) q->p.user_data;
               marker->marker = -1.;
             }
           }
-          sc_array_destroy (neighboring_quads);
-          sc_array_destroy (neighboring_encs);
-          sc_array_destroy (neighboring_qids);
         }
       }
 #ifdef P4_TO_P8
       if (printEdges) {
         for (i = 0; i < P8EST_EDGES; ++i) {
           direction = dir_offset_edge + i;
-          sc_array_t         *neighboring_quads, *neighboring_encs;
-          sc_array_t         *neighboring_qids;
-          neighboring_quads = sc_array_new (sizeof (p4est_quadrant_t *));
-          neighboring_encs = sc_array_new (sizeof (int));
-          neighboring_qids = sc_array_new (sizeof (int));
-          p4est_mesh_get_neighbors (p4est, ghost, mesh, norm_quad,
-                                    direction, neighboring_quads,
-                                    neighboring_encs, neighboring_qids);
+          sc_array_truncate (neighboring_quads);
+          sc_array_truncate (neighboring_qids);
+          p4est_mesh_get_neighbors (p4est, ghost, mesh, norm_quad, direction,
+                                    neighboring_quads, NULL,
+                                    neighboring_qids);
 
-          for (j = 0; j < neighboring_quads->elem_count; ++j) {
-            p4est_quadrant_t   *q =
-              *(p4est_quadrant_t **) sc_array_index_int (neighboring_quads,
-                                                         j);
-            encoding = *(int *) sc_array_index_int (neighboring_encs, j);
-            if (encoding > 0) {
-              test_mesh_marker_t *marker = (test_mesh_marker_t *)
-                q->p.user_data;
+          for (j = 0; j < (int) neighboring_quads->elem_count; ++j) {
+            q = *(p4est_quadrant_t **) sc_array_index_int (neighboring_quads,
+                                                           j);
+            neighbor_qid = *(int *) sc_array_index (neighboring_qids, j);
+            P4EST_ASSERT (0 <= neighbor_qid && neighbor_qid < (lq + gq));
+            if (0 <= neighbor_qid && neighbor_qid < lq) {
+              marker = (test_mesh_marker_t *) q->p.user_data;
               marker->marker = -1.;
             }
           }
-          sc_array_destroy (neighboring_quads);
-          sc_array_destroy (neighboring_encs);
-          sc_array_destroy (neighboring_qids);
         }
       }
 #endif /* P4_TO_P8 */
       if (printCorners) {
         for (i = 0; i < P4EST_CHILDREN; ++i) {
           direction = dir_offset_corner + i;
-          sc_array_t         *neighboring_quads, *neighboring_encs;
-          sc_array_t         *neighboring_qids;
-          neighboring_quads = sc_array_new (sizeof (p4est_quadrant_t *));
-          neighboring_encs = sc_array_new (sizeof (int));
-          neighboring_qids = sc_array_new (sizeof (int));
-          p4est_mesh_get_neighbors (p4est, ghost, mesh, norm_quad,
-                                    direction, neighboring_quads,
-                                    neighboring_encs, neighboring_qids);
+          sc_array_truncate (neighboring_quads);
+          sc_array_truncate (neighboring_qids);
+          p4est_mesh_get_neighbors (p4est, ghost, mesh, norm_quad, direction,
+                                    neighboring_quads, NULL,
+                                    neighboring_qids);
 
-          for (j = 0; j < neighboring_quads->elem_count; ++j) {
-            p4est_quadrant_t   *q =
-              *(p4est_quadrant_t **) sc_array_index_int (neighboring_quads,
-                                                         j);
-            encoding = *(int *) sc_array_index_int (neighboring_encs, j);
-            if (encoding > 0) {
-              test_mesh_marker_t *marker = (test_mesh_marker_t *)
-                q->p.user_data;
+          for (j = 0; j < (int) neighboring_quads->elem_count; ++j) {
+            q = *(p4est_quadrant_t **) sc_array_index_int (neighboring_quads,
+                                                           j);
+            neighbor_qid = *(int *) sc_array_index (neighboring_qids, j);
+            P4EST_ASSERT (0 <= neighbor_qid && neighbor_qid < (lq + gq));
+            if (0 <= neighbor_qid && neighbor_qid < lq) {
+              marker = (test_mesh_marker_t *) q->p.user_data;
               marker->marker = -1.;
             }
           }
-          sc_array_destroy (neighboring_quads);
-          sc_array_destroy (neighboring_encs);
-          sc_array_destroy (neighboring_qids);
         }
       }
     }
   }
+  sc_array_destroy (neighboring_quads);
+  sc_array_destroy (neighboring_qids);
 
   return 0;
 }
@@ -423,6 +394,12 @@ test_mesh_one_tree (p4est_t * p4est,
                     p4est_connectivity_t * conn,
                     int8_t periodic, sc_MPI_Comm mpicomm)
 {
+  char                filename[35] = "test_mesh_setup_single_tree_";
+  char                scenario[30];
+  int                 minLevel = 2;
+  p4est_ghost_t      *ghost;
+  p4est_mesh_t       *mesh;
+
   /* ensure that we have null pointers at beginning and end of function */
   P4EST_ASSERT (p4est == NULL);
   P4EST_ASSERT (conn == NULL);
@@ -437,37 +414,25 @@ test_mesh_one_tree (p4est_t * p4est,
     p8est_connectivity_new_unitcube ();
 #endif /* !P4_TO_P8 */
   /* setup p4est */
-  int                 minLevel = 2;
   p4est = p4est_new_ext (mpicomm,
                          conn,
                          0,
                          minLevel,
                          1, sizeof (test_mesh_marker_t), test_mesh_init, 0);
 
-#if 0
   p4est_refine (p4est, 0, refineExactlyOnce, test_mesh_init);
   p4est_partition (p4est, 0, 0);
   p4est_balance (p4est, P4EST_CONNECT_FULL, test_mesh_init);
-#endif
 
   /* inspect setup of geometry and check if payload is set correctly */
-  char                filename[35] = "test_mesh_setup_single_tree_";
   strcat (filename, P4EST_STRING);
   test_mesh_write_vtk (p4est, filename);
 
   /* create mesh */
-#ifdef P4_TO_P8
-  p4est_ghost_t      *ghost = p4est_ghost_new (p4est, P8EST_CONNECT_EDGE);
-  p4est_mesh_t       *mesh =
-    p4est_mesh_new_ext (p4est, ghost, 1, 1, P8EST_CONNECT_EDGE);
-#else /* P4_TO_P8 */
-  p4est_ghost_t      *ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
-  p4est_mesh_t       *mesh =
-    p4est_mesh_new_ext (p4est, ghost, 1, 1, P4EST_CONNECT_FULL);
-#endif /* P4_TO_P8 */
+  ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
+  mesh = p4est_mesh_new_ext (p4est, ghost, 1, 1, 0, P4EST_CONNECT_FULL);
 
   /* check mesh */
-  char                scenario[30];
   snprintf (scenario, 30, (periodic ? "single_tree_p" : "single_tree_np"));
   check_mesh (p4est, ghost, mesh, scenario);
 
@@ -476,10 +441,13 @@ test_mesh_one_tree (p4est_t * p4est,
   p4est_mesh_destroy (mesh);
   p4est_destroy (p4est);
   p4est_connectivity_destroy (conn);
+
   conn = 0;
   p4est = 0;
+
   P4EST_ASSERT (p4est == NULL);
   P4EST_ASSERT (conn == NULL);
+
   return 0;
 }
 
@@ -495,45 +463,42 @@ test_mesh_multiple_trees_brick (p4est_t * p4est,
                                 p4est_connectivity_t * conn,
                                 int8_t periodic, sc_MPI_Comm mpicomm)
 {
+  char                filename[29] = "test_mesh_setup_brick_";
+  char                scenario[30];
+  int                 minLevel = 2;
+  p4est_ghost_t      *ghost;
+  p4est_mesh_t       *mesh;
+
   /* ensure that we have null pointers at beginning and end of function */
   P4EST_ASSERT (p4est == NULL);
   P4EST_ASSERT (conn == NULL);
+
   /* create connectivity */
 #ifndef P4_TO_P8
   conn = p4est_connectivity_new_brick (2, 1, periodic, periodic);
 #else /* !P4_TO_P8 */
   conn = p8est_connectivity_new_brick (2, 1, 1, periodic, periodic, periodic);
 #endif /* !P4_TO_P8 */
+
   /* setup p4est */
-  int                 minLevel = 2;
   p4est = p4est_new_ext (mpicomm,
                          conn,
                          0,
                          minLevel,
                          1, sizeof (test_mesh_marker_t), test_mesh_init, 0);
-  /*
-     p4est_refine (p4est, 0, refineExactlyOnce, 0);
-     p4est_partition (p4est, 0, 0);
-     p4est_balance (p4est, P4EST_CONNECT_FULL, 0);
-   */
 
-  char                filename[29] = "test_mesh_setup_brick_";
+  p4est_refine (p4est, 0, refineExactlyOnce, 0);
+  p4est_partition (p4est, 0, 0);
+  p4est_balance (p4est, P4EST_CONNECT_FULL, 0);
+
   strcat (filename, P4EST_STRING);
   p4est_vtk_write_file (p4est, 0, filename);
-  /* create mesh */
 
-#ifdef P4_TO_P8
-  p4est_ghost_t      *ghost = p4est_ghost_new (p4est, P8EST_CONNECT_EDGE);
-  p4est_mesh_t       *mesh =
-    p4est_mesh_new_ext (p4est, ghost, 1, 1, P8EST_CONNECT_EDGE);
-#else /* P4_TO_P8 */
-  p4est_ghost_t      *ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
-  p4est_mesh_t       *mesh =
-    p4est_mesh_new_ext (p4est, ghost, 1, 1, P4EST_CONNECT_FULL);
-#endif /* P4_TO_P8 */
+  /* create mesh */
+  ghost = p4est_ghost_new (p4est, P4EST_CONNECT_FULL);
+  mesh = p4est_mesh_new_ext (p4est, ghost, 1, 1, 0, P4EST_CONNECT_FULL);
 
   /* check mesh */
-  char                scenario[30];
   snprintf (scenario, 30,
             (periodic ? "multiple_tree_brick_p" : "multiple_tree_brick_np"));
   check_mesh (p4est, ghost, mesh, scenario);
@@ -543,10 +508,13 @@ test_mesh_multiple_trees_brick (p4est_t * p4est,
   p4est_mesh_destroy (mesh);
   p4est_destroy (p4est);
   p4est_connectivity_destroy (conn);
+
   conn = 0;
   p4est = 0;
+
   P4EST_ASSERT (p4est == NULL);
   P4EST_ASSERT (conn == NULL);
+
   return 0;
 }
 
@@ -574,6 +542,8 @@ main (int argc, char **argv)
   p4est_t            *p4est;
   p4est_connectivity_t *conn;
   int8_t              periodic_boundaries;
+  int                 test_single, test_multi_brick, test_multi_non_brick;
+
   /* initialize MPI */
   mpiret = sc_MPI_Init (&argc, &argv);
   SC_CHECK_MPI (mpiret);
@@ -582,12 +552,13 @@ main (int argc, char **argv)
   SC_CHECK_MPI (mpiret);
   mpiret = sc_MPI_Comm_rank (mpicomm, &mpirank);
   SC_CHECK_MPI (mpiret);
+
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
+
   p4est = 0;
   conn = 0;
 
-  int                 test_single, test_multi_brick, test_multi_non_brick;
   test_single = 1;
   test_multi_brick = 0;
   test_multi_non_brick = 0;
@@ -621,9 +592,11 @@ main (int argc, char **argv)
     test_mesh_multiple_trees_nonbrick (p4est, conn,
                                        periodic_boundaries, mpicomm);
   }
+
   /* exit */
   sc_finalize ();
   mpiret = sc_MPI_Finalize ();
   SC_CHECK_MPI (mpiret);
+
   return 0;
 }
