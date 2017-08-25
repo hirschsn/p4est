@@ -35,21 +35,27 @@
 #include <p8est_mesh.h>
 #endif /* !P4_TO_P8 */
 
+/** Check that indices in parallel boundary and mirrors are consistent.
+ *
+ * \param[in] p4est     The forest.
+ * \param[in] ghost     Ghost layer.
+ * \param[in] mesh      Neighbor information about forest and ghost layer.
+ */
 int
 check_consistency_with_mirrors (p4est_t * p4est, p4est_ghost_t * ghost,
                                 p4est_mesh_t * mesh)
 {
   size_t              i;
   int                 count_mirrors = 0;
-  int qid;
+  int                 qid;
   p4est_quadrant_t   *q, *m;
 
   for (i = 0; i < ghost->mirrors.elem_count; ++i) {
     qid = mesh->mirror_qid[i];
     P4EST_ASSERT (0 <= qid && qid < mesh->local_num_quadrants);
-    P4EST_ASSERT (i == mesh->parallel_boundary[qid]);
+    P4EST_ASSERT ((p4est_locidx_t) i == mesh->parallel_boundary[qid]);
   }
-  for (i = 0; i < mesh->local_num_quadrants; ++i) {
+  for (i = 0; i < (size_t) mesh->local_num_quadrants; ++i) {
     if (-1 < mesh->parallel_boundary[i]) {
       q = p4est_mesh_get_quadrant (p4est, mesh, i);
       m =
