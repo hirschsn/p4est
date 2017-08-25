@@ -68,6 +68,95 @@ check_consistency_with_mirrors (p4est_t * p4est, p4est_ghost_t * ghost,
   return 0;
 }
 
+/** Check that all mirrors are detected correctly, i.e. if a quadrant has
+ * neighbors in the ghost layer, parallel boundary must be set.  If all
+ * neighbors are owned by the same rank, the flag must not be set.
+ *
+ * \param[in] p4est     The forest.
+ * \param[in] ghost     Ghost layer.
+ * \param[in] mesh      Neighbor information about forest and ghost layer.
+ */
+int
+check_parallel_boundary_flag_is_valid (p4est_t * p4est, p4est_ghost_t * ghost,
+                                       p4est_mesh_t * mesh)
+{
+  int                 quad, norm_quad;
+  int                 i, imax, j;
+  int                 lq = mesh->local_num_quadrants;
+  int                 gq = mesh->ghost_num_quadrants;
+  sc_array_t         *neighboring_qids;
+  int                 neighbor_qid;
+  int                 n_ghost_neighbors;
+
+  switch (ghost->btype) {
+  case P4EST_CONNECT_FACE:
+    imax = P4EST_FACES;
+    break;
+#ifdef P4_TO_P8
+  case P8EST_CONNECT_EDGE:
+    imax = P4EST_FACES + P8EST_EDGES;
+    break;
+#endif /* P4_TO_P8 */
+  case P4EST_CONNECT_FULL:
+#ifdef P4_TO_P8
+    imax = P4EST_FACES + P8EST_EDGES + P4EST_CHILDREN;
+#else /* P4_TO_P8 */
+    imax = P4EST_FACES + P4EST_CHILDREN;
+#endif /* P4_TO_P8 */
+    break;
+  default:
+    SC_ABORT_NOT_REACHED ();
+  }
+
+  /** allocate containers */
+  neighboring_qids = sc_array_new (sizeof (int));
+
+  for (quad = 0; quad < p4est->global_num_quadrants; ++quad) {
+    sc_MPI_Barrier (p4est->mpicomm);
+    /** loop over all quads, verify only on the processor owning the respective
+        quadrant. */
+    if (p4est->global_first_quadrant[p4est->mpirank] <= quad &&
+        quad < p4est->global_first_quadrant[p4est->mpirank + 1]) {
+      /** norm global quad index to local index */
+      norm_quad = quad - p4est->global_first_quadrant[p4est->mpirank];
+      /**(quadrant must be local by design) */
+      P4EST_ASSERT (0 <= norm_quad && norm_quad < lq);
+      n_ghost_neighbors = 0;
+
+      for (i = 0; i < imax; ++i) {
+        /** empty containers */
+        sc_array_truncate (neighboring_qids);
+
+        /** search neighbors */
+        p4est_mesh_get_neighbors (p4est, ghost, mesh, norm_quad, i, NULL,
+                                  NULL, neighboring_qids);
+
+        /** inspect obtained neighbors */
+        for (j = 0; j < (int) neighboring_qids->elem_count; ++j) {
+          neighbor_qid = *(int *) sc_array_index (neighboring_qids, j);
+
+          P4EST_ASSERT (0 <= neighbor_qid && neighbor_qid < (lq + gq));
+          if (lq <= neighbor_qid && neighbor_qid < (lq + gq)) {
+            ++n_ghost_neighbors;
+          }
+        }
+      }
+      if (n_ghost_neighbors) {
+        P4EST_ASSERT (-1 < mesh->parallel_boundary[norm_quad]
+                      && mesh->parallel_boundary[norm_quad] <
+                      (p4est_locidx_t) ghost->mirrors.elem_count);
+      }
+      else {
+        P4EST_ASSERT (-1 == mesh->parallel_boundary[norm_quad]);
+      }
+    }
+  }
+  /** de-allocate containers */
+  sc_array_destroy (neighboring_qids);
+
+  return 0;
+}
+
 /* Function for testing p4est-mesh for a single tree scenario
  *
  * \param [in] p4est     The forest.
@@ -110,6 +199,7 @@ test_mesh_one_tree (p4est_t * p4est, p4est_connectivity_t * conn,
 
   /* check mesh */
   check_consistency_with_mirrors (p4est, ghost, mesh);
+  check_parallel_boundary_flag_is_valid (p4est, ghost, mesh);
 
   /* cleanup */
   p4est_ghost_destroy (ghost);
