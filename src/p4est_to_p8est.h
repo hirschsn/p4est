@@ -117,6 +117,7 @@
 #define p4est_wrap_leaf_t               p8est_wrap_leaf_t
 #define p4est_wrap_flags_t              p8est_wrap_flags_t
 #define p4est_vtk_context_t             p8est_vtk_context_t
+#define p4est_virtual_t                 p8est_virtual_t
 
 /* redefine external variables */
 #define p4est_face_corners              p8est_face_corners
@@ -453,5 +454,8 @@
 
 /* functions in p4est_connrefine */
 #define p4est_connectivity_refine       p8est_connectivity_refine
+
+/* functions in p4est_virtual */
+
 
 #endif /* !P4EST_TO_P8EST_H */
