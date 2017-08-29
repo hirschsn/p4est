@@ -138,7 +138,7 @@ p8est_t            *p8est_new_ext (sc_MPI_Comm mpicomm,
  * \param [in] compute_tree_index   Boolean to decide whether to allocate and
  *                                  compute the quad_to_tree list.
  * \param [in] compute_level_lists  Boolean to decide whether to compute the
- *                                  level lists in quad_level.
+ *                                  level lists in quad_level and ghost_level.
  * \param [in] computer_parallel_boundary  Boolean to decide whether to allocate
  *                                         and compute parallel_boundary and
  *                                         mirror_qid.
