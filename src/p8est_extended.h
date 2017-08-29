@@ -42,6 +42,7 @@
 
 #include <p8est.h>
 #include <p8est_mesh.h>
+#include <p8est_virtual.h>
 #include <p8est_iterate.h>
 #include <p8est_lnodes.h>
 
@@ -151,6 +152,24 @@ p8est_mesh_t       *p8est_mesh_new_ext (p8est_t * p4est,
                                         int compute_level_lists,
                                         int compute_parallel_boundary,
                                         p8est_connect_type_t btype);
+
+/** Create a p8est_virtual structure.
+ * \param[in] p4est    A forest that is 2:1 balanced up to \b btype.
+ * \param[in] ghost    The ghost layer created from the provided p4est.
+ * \param[in] mesh     The neighboring lookup tables created from provided p4est
+ *                     and ghost.
+ * \param[in] btype    The highest codimension of neighbors to consider for
+ *                     embedding virtual quadrants.
+ * \param[in] compute_level_lists   Boolean to decide whether to allocate level
+ *                                  lists in virtual_qlevels and
+ *                                  virtual_glevels.
+ * \return             A fully allocated structure of virtual quadrants.
+ */
+p8est_virtual_t    *p8est_virtual_new_ext (p8est_t * p4est,
+                                           p8est_ghost_t * ghost,
+                                           p8est_mesh_t * mesh,
+                                           p8est_connect_type_t btype,
+                                           int compute_level_lists);
 
 /** Make a deep copy of a p8est.
  * The connectivity is not duplicated.

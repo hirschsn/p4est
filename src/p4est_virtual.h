@@ -33,7 +33,13 @@
 #ifndef P4EST_VIRTUAL_H
 #define P4EST_VIRTUAL_H
 
+#ifdef P4_TO_P8
+#error "Including a p4est header with P4_TO_P8 defined"
+#endif
+
 #include <p4est.h>
+#include <p4est_ghost.h>
+#include <p4est_mesh.h>
 
 SC_EXTERN_C_BEGIN;
 
@@ -100,6 +106,27 @@ typedef struct
                                                      any, either real or
                                                      virtual.  Else -1. */
 } p4est_virtual_t;
+
+/** Create a p4est_virtual structure.
+ * This function does not populate virtual_qlevels and virtual_glevels fields.
+ * To populate them, use \ref p4est_virtual_new_ext.
+ * \param[in] p4est    A forest that is 2:1 balanced up to \b btype.
+ * \param[in] ghost    The ghost layer created from the provided p4est.
+ * \param[in] mesh     The neighboring lookup tables created from provided p4est
+ *                     and ghost.
+ * \param[in] btype    The highest codimension of neighbors to consider for
+ *                     embedding virtual quadrants.
+ * \return             A fully allocated structure of virtual quadrants.
+ */
+p4est_virtual_t    *p4est_virtual_new (p4est_t * p4est, p4est_ghost_t * ghost,
+                                       p4est_mesh_t * mesh,
+                                       p4est_connect_type_t btype);
+
+/** Destroy a p4est_virtual structure.
+ * \param [in] virtual   Virtual structure previously created by
+ *                       p4est_virtual_new or p4est_virtual_new_ext.
+ */
+void                p4est_virtual_destroy (p4est_virtual_t * virtual);
 
 /* -------------------------------------------------------------------------- */
 /* |                             Ghost exchange                             | */

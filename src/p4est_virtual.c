@@ -22,7 +22,16 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
+#ifndef P4_TO_P8
 #include <p4est_virtual.h>
+#include <p4est_connectivity.h>
+#include <p4est_extended.h>
+#else /* !P4_TO_P8 */
+#include <p8est_virtual.h>
+#include <p8est_extended.h>
+#endif /* !P4_TO_P8 */
+
+#ifndef P4_TO_P8
 
 /* *INDENT-OFF* */
 const int           p4est_face_virtual_neighbors_inside[P4EST_CHILDREN]
@@ -39,3 +48,28 @@ const int           p4est_corner_virtual_neighbors_inside[P4EST_CHILDREN]
  {  4,  1, 14, 11 },
  {  0,  5,  7, 15 }};
 /* *INDENT-ON* */
+
+#endif /* P4_TO_P8 */
+
+p4est_virtual_t    *
+p4est_virtual_new (p4est_t * p4est, p4est_ghost_t * ghost,
+                   p4est_mesh_t * mesh, p4est_connect_type_t btype)
+{
+  return p4est_virtual_new_ext (p4est, ghost, mesh, btype, 0);
+}
+
+p4est_virtual_t    *
+p4est_virtual_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
+                       p4est_mesh_t * mesh, p4est_connect_type_t btype,
+                       int compute_level_lists)
+{
+  p4est_virtual_t    *virtual;
+
+  return virtual;
+}
+
+void
+p4est_virtual_destroy (p4est_virtual_t * virtual)
+{
+
+}

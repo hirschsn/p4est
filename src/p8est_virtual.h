@@ -34,6 +34,8 @@
 #define P8EST_VIRTUAL_H
 
 #include <p8est.h>
+#include <p8est_ghost.h>
+#include <p8est_mesh.h>
 
 SC_EXTERN_C_BEGIN;
 
@@ -61,7 +63,8 @@ SC_EXTERN_C_BEGIN;
  * virtual quadrants in quad_qvirtual_offset. If the current quadrant does not
  * contain virtual quadrants, -1 is stored.
  */
-typedef struct {
+typedef struct
+{
   p8est_connect_type_t btype;           /**< which neighbors are considered in
                                              virtual */
 
@@ -95,6 +98,35 @@ typedef struct {
                                                      any, either real or
                                                      virtual.  Else -1. */
 } p8est_virtual_t;
+
+/** Create a p8est_virtual structure.
+ * This function does not populate virtual_qlevels and virtual_glevels fields.
+ * To populate them, use \ref p8est_virtual_new_ext.
+ * \param[in] p4est    A forest that is 2:1 balanced up to \b btype.
+ * \param[in] ghost    The ghost layer created from the provided p4est.
+ * \param[in] mesh     The neighboring lookup tables created from provided p4est
+ *                     and ghost.
+ * \param[in] btype    The highest codimension of neighbors to consider for
+ *                     embedding virtual quadrants.
+ * \return             A fully allocated structure of virtual quadrants.
+ */
+p8est_virtual_t    *p8est_virtual_new (p8est_t * p4est, p8est_ghost_t * ghost,
+                                       p8est_mesh_t * mesh,
+                                       p8est_connect_type_t btype);
+
+/** Destroy a p8est_virtual structure.
+ * \param [in] virtual   Virtual structure previously created by
+ *                       p8est_virtual_new or p8est_virtual_new_ext.
+ */
+void                p8est_virtual_destroy (p8est_virtual_t * virtual);
+
+/* -------------------------------------------------------------------------- */
+/* |                             Ghost exchange                             | */
+/* -------------------------------------------------------------------------- */
+
+/* -------------------------------------------------------------------------- */
+/* |                            Neighbor search                             | */
+/* -------------------------------------------------------------------------- */
 
 /* *INDENT-OFF* */
 /** Store for each virtual subquad the index in Morton-order of the neighboring

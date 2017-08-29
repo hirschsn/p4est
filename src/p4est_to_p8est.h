@@ -456,6 +456,14 @@
 #define p4est_connectivity_refine       p8est_connectivity_refine
 
 /* functions in p4est_virtual */
+#define p4est_virtual_new               p8est_virtual_new
+#define p4est_virtual_new_ext           p8est_virtual_new_ext
+#define p4est_virtual_new_destroy       p8est_virtual_new_destroy
 
+/* variables in p4est_virtual */
+#define p4est_face_virtual_neighbors_inside \
+        p8est_face_virtual_neighbors_inside
+#define p4est_corner_virtual_neighbors_inside \
+        p8est_corner_virtual_neighbors_inside
 
 #endif /* !P4EST_TO_P8EST_H */

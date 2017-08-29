@@ -22,7 +22,8 @@
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
 
-#include <p8est_virtual.h>
+#include <p4est_to_p8est.h>
+#include <p8est_connectivity.h>
 
 /* *INDENT-OFF* */
 const int           p8est_face_virtual_neighbors_inside[P8EST_CHILDREN]
@@ -58,3 +59,5 @@ const int           p8est_corner_virtual_neighbors_inside[P8EST_CHILDREN]
  {  8,  1, 42, 17, 38, 19, 62, 47 },
  {  0,  9, 11, 43, 13, 39, 35, 63 }};
 /* *INDENT-ON* */
+
+#include "p4est_virtual.c"
