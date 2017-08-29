@@ -128,6 +128,12 @@ p4est_virtual_t    *p4est_virtual_new (p4est_t * p4est, p4est_ghost_t * ghost,
  */
 void                p4est_virtual_destroy (p4est_virtual_t * virtual);
 
+/** Calculate the memory usage of the virtual structure.
+ * \param[in] virtual   Virtual structure
+ * \return              Memory used in bytes.
+ */
+size_t              p4est_virtual_memory_used (p4est_virtual_t * virtual);
+
 /* -------------------------------------------------------------------------- */
 /* |                             Ghost exchange                             | */
 /* -------------------------------------------------------------------------- */

@@ -120,6 +120,12 @@ p8est_virtual_t    *p8est_virtual_new (p8est_t * p4est, p8est_ghost_t * ghost,
  */
 void                p8est_virtual_destroy (p8est_virtual_t * virtual);
 
+/** Calculate the memory usage of the virtual structure.
+ * \param[in] virtual   Virtual structure
+ * \return              Memory used in bytes.
+ */
+size_t              p8est_virtual_memory_used (p8est_virtual_t * virtual);
+
 /* -------------------------------------------------------------------------- */
 /* |                             Ghost exchange                             | */
 /* -------------------------------------------------------------------------- */

@@ -73,3 +73,9 @@ p4est_virtual_destroy (p4est_virtual_t * virtual)
 {
 
 }
+
+size_t
+p4est_virtual_memory_used (p4est_virtual_t * virtual)
+{
+  return 0;
+}
