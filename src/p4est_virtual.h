@@ -51,7 +51,11 @@ SC_EXTERN_C_BEGIN;
  * virtual quadrants.
  *
  * If a quadrant contains virtual quadrants is stored in virtual_qflags for
- * local quadrants and virtual_gflags for ghost quadrants.
+ * local quadrants and virtual_gflags for ghost quadrants.  If the quadrant
+ * contains virtual quadrants the number of coarse quadrants at a refinement
+ * boundary in Morton order, i.e. the number of quadrants hosting virtual
+ * quadrants up to the current quadrant. If the quadrant does not contain
+ * virtual quadrants, we store -1.
  *
  * For each level, an array of local quadrant numbers is stored in
  * virtual_qlevels if the respective quadrant contains virtual quadrants. Note,
@@ -66,15 +70,22 @@ SC_EXTERN_C_BEGIN;
  * information is stored for the first virtual quadrant if the quadrant contains
  * virtual quadrants in quad_qvirtual_offset. If the current quadrant does not
  * contain virtual quadrants, -1 is stored.
+ * These arrays are NULL by default and can be enabled using \ref
+ * p4est_virtual_new_ext.
  */
 typedef struct
 {
   p4est_connect_type_t btype;           /**< which neighbors are considered in
                                              virtual */
 
-  int8_t             *virtual_qflags;   /**< stores if quad has virtual quads */
-  int8_t             *virtual_gflags;   /**< stores if ghost has virtual
-                                             quads */
+  p4est_locidx_t     *virtual_qflags;   /**< stores if quad has virtual quads
+                                             and how many local quadrants
+                                             containing virtual quadrants are
+                                             preceding it in Morton-order */
+  p4est_locidx_t     *virtual_gflags;   /**< stores if ghost has virtual quads
+                                             and how many ghosts containing
+                                             virtual quadrants are preceding
+                                             it in Morton-order */
   sc_array_t         *virtual_qlevels;  /**< stores lists of per-level
                                              virtual quads, NULL by default,
                                              can be enabled in
@@ -86,25 +97,35 @@ typedef struct
   p4est_locidx_t     *quad_qreal_offset;        /**< stores number of quadrants
                                                      preceding current quadrant
                                                      on its level, either real
-                                                     or virtual. */
+                                                     or virtual.  NULL by
+                                                     default, can be enabled in
+                                                     \ref p4est_virtual_new_ext */
   p4est_locidx_t     *quad_qvirtual_offset;     /**< stores number of quadrants
                                                      preceding first virtual
                                                      sub-quadrant of current
                                                      quadrant on the level of
                                                      its virtual sub-quads if it
                                                      has any, either real or
-                                                     virtual.  Else -1. */
+                                                     virtual.  Else -1.  NULL
+                                                     by default, can be enabled
+                                                     in \ref
+                                                     p4est_virtual_new_ext */
   p4est_locidx_t     *quad_greal_offset;        /**< stores number of quadrants
-                                                     preceeding current ghost
+                                                     preceding current ghost
                                                      on its level, either real
-                                                     or virtual. */
+                                                     or virtual.  NULL by
+                                                     default, can be enabled in
+                                                     \ref p4est_virtual_new_ext */
   p4est_locidx_t     *quad_gvirtual_offset;     /**< stores number of quadrants
                                                      preceding first virtual
                                                      sub-quadrant of current
                                                      ghost on the level of its
                                                      virtual sub-quads if it has
                                                      any, either real or
-                                                     virtual.  Else -1. */
+                                                     virtual.  Else -1.  NULL
+                                                     by default, can be enabled
+                                                     in \ref
+                                                     p4est_virtual_new_ext */
 } p4est_virtual_t;
 
 /** Create a p4est_virtual structure.

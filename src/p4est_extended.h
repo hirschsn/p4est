@@ -161,8 +161,9 @@ p4est_mesh_t       *p4est_mesh_new_ext (p4est_t * p4est,
  * \param[in] btype    The highest codimension of neighbors to consider for
  *                     embedding virtual quadrants.
  * \param[in] compute_level_lists   Boolean to decide whether to allocate level
- *                                  lists in virtual_qlevels and
- *                                  virtual_glevels.
+ *                                  lists in virtual_qlevels, virtual_glevels,
+ *                                  quad_qreal_offset, quad_qvirtual_offset,
+ *                                  quad_greal_offset, and quad_gvirtual_offset.
  * \return             A fully allocated structure of virtual quadrants.
  */
 p4est_virtual_t    *p4est_virtual_new_ext (p4est_t * p4est,
