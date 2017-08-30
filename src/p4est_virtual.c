@@ -94,7 +94,7 @@ has_virtuals_inner (p4est_virtual_t * virtual, p4est_t * p4est,
   }
 
   for (has_virtuals = 0, i = 0; !has_virtuals && i < imax; ++i) {
-    sc_array_truncate(quads);
+    sc_array_truncate (quads);
 
     p4est_mesh_get_neighbors (p4est, ghost, mesh, qid, i, quads, NULL, NULL);
     for (j = 0; j < quads->elem_count; ++j) {
@@ -133,8 +133,8 @@ has_virtuals_parallel_boundary (p4est_virtual_t * virtual, p4est_t * p4est,
   p4est_quadrant_t   *neighbor;
   p4est_locidx_t      neighbor_qid;
 
-  lq = mesh->local_num_quadrants;
-  gq = mesh->ghost_num_quadrants;
+  lq = virtual->local_num_quadrants;
+  gq = virtual->ghost_num_quadrants;
 
   switch (virtual->btype) {
   case P4EST_CONNECT_FACE:
@@ -159,8 +159,8 @@ has_virtuals_parallel_boundary (p4est_virtual_t * virtual, p4est_t * p4est,
   }
 
   for (i = 0; i < imax; ++i) {
-    sc_array_truncate(quads);
-    sc_array_truncate(qids);
+    sc_array_truncate (quads);
+    sc_array_truncate (qids);
 
     p4est_mesh_get_neighbors (p4est, ghost, mesh, qid, i, quads, NULL, qids);
     for (j = 0; j < quads->elem_count; ++j) {
@@ -199,10 +199,9 @@ p4est_virtual_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
   p4est_locidx_t      level, quad;
   sc_array_t         *quads, *qids;
   p4est_locidx_t      lq, gq;
-  p4est_locidx_t *lq_per_level, *gq_per_level;
+  p4est_locidx_t     *lq_per_level, *gq_per_level;
+  p4est_quadrant_t   *ghost_quad
 
-  lq = mesh->local_num_quadrants;
-  gq = mesh->ghost_num_quadrants;
   quads = sc_array_new (sizeof (p4est_quadrant_t *));
   qids = sc_array_new (sizeof (int));
   lq_per_level = P4EST_ALLOC_ZERO (p4est_locidx_t, P4EST_QMAXLEVEL + 1);
@@ -215,6 +214,8 @@ p4est_virtual_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
   virtual = P4EST_ALLOC_ZERO (p4est_virtual_t, 1);
 
   virtual->btype = btype;
+  virtual->local_num_quadrants = lq = mesh->local_num_quadrants;
+  virtual->ghost_num_quadrants = gq = mesh->ghost_num_quadrants;
   virtual->virtual_qflags = P4EST_ALLOC (p4est_locidx_t, lq);
   virtual->virtual_gflags = P4EST_ALLOC (p4est_locidx_t, gq);
   memset (virtual->virtual_qflags, (char) -1, lq * sizeof (p4est_locidx_t));
@@ -244,7 +245,7 @@ p4est_virtual_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
     }
   }
 
-  for (quad = 0; quad < mesh->local_num_quadrants; ++quad) {
+  for (quad = 0; quad < lq; ++quad) {
     sc_array_truncate (quads);
     sc_array_truncate (qids);
     if (mesh->parallel_boundary && -1 == mesh->parallel_boundary[quad]) {
@@ -256,6 +257,15 @@ p4est_virtual_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
                                       &last_virtual_index, quads, qids);
     }
   }
+
+  last_virtual_index = 0;
+  for (quad = 0; quad < gq; ++quad) {
+    if (virtual->virtual_gflags[quad] != -1) {
+      virtual->virtual_gflags[quad] = last_virtual_index;
+      ++last_virtual_index;
+    }
+  }
+
   P4EST_FREE (lq_per_level);
   P4EST_FREE (gq_per_level);
 
@@ -268,17 +278,17 @@ p4est_virtual_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
 void
 p4est_virtual_destroy (p4est_virtual_t * virtual)
 {
-  int i;
+  int                 i;
 
-  P4EST_FREE(virtual->virtual_qflags);
-  P4EST_FREE(virtual->virtual_gflags);
+  P4EST_FREE (virtual->virtual_qflags);
+  P4EST_FREE (virtual->virtual_gflags);
   if (virtual->quad_qreal_offset != NULL) {
     P4EST_FREE (virtual->quad_qreal_offset);
     P4EST_FREE (virtual->quad_qvirtual_offset);
     P4EST_FREE (virtual->quad_greal_offset);
     P4EST_FREE (virtual->quad_gvirtual_offset);
 
-    for (i = 0; i < P4EST_QMAXLEVEL + 1; ++i){
+    for (i = 0; i < P4EST_QMAXLEVEL + 1; ++i) {
       sc_array_reset (virtual->virtual_qlevels + i);
       sc_array_reset (virtual->virtual_glevels + i);
     }
