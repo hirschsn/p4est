@@ -301,5 +301,29 @@ p4est_virtual_destroy (p4est_virtual_t * virtual)
 size_t
 p4est_virtual_memory_used (p4est_virtual_t * virtual)
 {
-  return 0;
+  size_t              i, lqz, ngz;
+  int                 level;
+  size_t              mem_flags = 0;
+  size_t              mem_offset = 0;
+  size_t              mem_levels = 0;
+  size_t              all_mem;
+
+  lqz = (size_t) virtual->local_num_quadrants;
+  ngz = (size_t) virtual->ghost_num_quadrants;
+
+  mem_flags = (lqz + ngz) * sizeof (p4est_locidx_t);
+  if (virtual->quad_qreal_offset) {
+    mem_offset = 2 * (lqz + ngz) * sizeof (p4est_locidx_t);
+    mem_levels = 2 * sizeof (sc_array_t) * (P4EST_QMAXLEVEL + 1);
+    for (level = 0; level <= P4EST_QMAXLEVEL; ++level) {
+      mem_levels +=
+        sc_array_memory_used (virtual->virtual_qlevels + level, 0);
+      mem_levels +=
+        sc_array_memory_used (virtual->virtual_glevels + level, 0);
+    }
+  }
+
+  all_mem = mem_flags + mem_offset + mem_levels + sizeof (p4est_virtual_t);
+
+  return all_mem;
 }
