@@ -125,6 +125,14 @@ set_limits (int direction, p4est_connect_type_t btype,
   return 0;
 }
 
+/** Encode direction in the sense of p4est's internal enumeration scheme to a
+ * direction that can be used in \ref p4est_mesh_get_neighbors.
+ * \param[in]  dir     Direction in p4est's enumeration scheme for faces
+ *                     (, edges,) and corners.
+ * \param[in]  entity  Encode if we deal with faces (0), edges (1), or
+ *                     corners (2D: 1, 3D: 2).
+ * \return             Direction compatible to \ref p4est_mesh_get_neighbors
+ */
 static int
 encode_direction (int dir, int entity)
 {
@@ -287,7 +295,6 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
         quad < p4est->global_first_quadrant[p4est->mpirank + 1]) {
       /** norm global quad index to local index */
       norm_quad = quad - p4est->global_first_quadrant[p4est->mpirank];
-      /**(quadrant must be local by design) */
       P4EST_ASSERT (0 <= norm_quad && norm_quad < lq);
 
       for (i = 0; i < imax; ++i) {
@@ -353,8 +360,6 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
             continue;
           }
 
-          /** normalize encoding before decoding (abs not necessary, because
-              quadrant must be local) */
           decode_encoding (neighbor_enc, n_neighbor_entities, l_same_size,
                            u_same_size, l_double_size, u_double_size,
                            l_half_size, u_half_size, &neighbor_subquad,
@@ -458,8 +463,6 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
               found_enc = *(int *) sc_array_index (found_encs, k);
 
               if (found_qid == norm_quad) {
-                /** normalize encoding before decoding (abs not necessary,
-                    because quadrant must be local by design) */
                 decode_encoding (found_enc, n_neighbor_entities, l_same_size,
                                  u_same_size, l_double_size, u_double_size,
                                  l_half_size, u_half_size, &found_subquad,
