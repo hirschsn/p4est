@@ -116,18 +116,23 @@ has_virtuals_inner (p4est_virtual_t * virtual, p4est_t * p4est,
       }
     }
   }
-  virtual->quad_qreal_offset[qid] =
-    lq_per_level_real[level] + P4EST_CHILDREN * lq_per_level_virt[level];
-  ++lq_per_level_real[level];
+  if (virtual->quad_qreal_offset) {
+    virtual->quad_qreal_offset[qid] =
+      lq_per_level_real[level] + P4EST_CHILDREN * lq_per_level_virt[level];
+    ++lq_per_level_real[level];
+  }
   if (has_virtuals) {
     virtual->virtual_qflags[qid] = ++(*last_virtual);
-    virtual->quad_qvirtual_offset[qid] =
-      lq_per_level_real[level + 1] +
-      P4EST_CHILDREN * lq_per_level_virt[level + 1];
-    insert_locidx_t =
-      (p4est_locidx_t *) sc_array_push (virtual->virtual_qlevels +
-                                        (level + 1));
-    *insert_locidx_t = qid;
+    if (virtual->quad_qreal_offset) {
+      virtual->quad_qvirtual_offset[qid] =
+        lq_per_level_real[level + 1] +
+        P4EST_CHILDREN * lq_per_level_virt[level + 1];
+      ++lq_per_level_virt[level + 1];
+      insert_locidx_t =
+        (p4est_locidx_t *) sc_array_push (virtual->virtual_qlevels +
+                                          (level + 1));
+      *insert_locidx_t = qid;
+    }
   }
 
   return 0;
@@ -213,18 +218,23 @@ has_virtuals_parallel_boundary (p4est_virtual_t * virtual, p4est_t * p4est,
       }
     }
   }
-  virtual->quad_qreal_offset[qid] =
-    lq_per_level_real[level] + P4EST_CHILDREN * lq_per_level_virt[level];
-  ++lq_per_level_real[level];
+  if (virtual->quad_qreal_offset) {
+    virtual->quad_qreal_offset[qid] =
+      lq_per_level_real[level] + P4EST_CHILDREN * lq_per_level_virt[level];
+    ++lq_per_level_real[level];
+  }
   if (has_virtuals) {
     virtual->virtual_qflags[qid] = ++(*last_virtual);
-    virtual->quad_qvirtual_offset[qid] =
-      lq_per_level_real[level + 1] +
-      P4EST_CHILDREN * lq_per_level_virt[level + 1];
-    insert_locidx_t =
-      (p4est_locidx_t *) sc_array_push (virtual->virtual_qlevels +
-                                        (level + 1));
-    *insert_locidx_t = qid;
+    if (virtual->quad_qreal_offset) {
+      virtual->quad_qvirtual_offset[qid] =
+        lq_per_level_real[level + 1] +
+        P4EST_CHILDREN * lq_per_level_virt[level + 1];
+      ++lq_per_level_virt[level + 1];
+      insert_locidx_t =
+        (p4est_locidx_t *) sc_array_push (virtual->virtual_qlevels +
+                                          (level + 1));
+      *insert_locidx_t = qid;
+    }
   }
 
   return 0;
