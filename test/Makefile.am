@@ -13,6 +13,7 @@ p4est_test_programs += \
         test/p4est_test_loadsave test/p4est_test_order \
         test/p4est_test_load test/p4est_test_ghost \
         test/p4est_test_mesh_bijective test/p4est_test_mesh_parallel_boundary \
+        test/p4est_test_per_level_arrays \
         test/p4est_test_conn_transformation \
         test/p4est_test_iterate test/p4est_test_lnodes \
         test/p4est_test_search test/p4est_test_brick \
@@ -37,6 +38,7 @@ p4est_test_programs += \
         test/p8est_test_periodic test/p8est_test_loadsave \
         test/p8est_test_load test/p8est_test_ghost \
         test/p8est_test_mesh_bijective test/p8est_test_mesh_parallel_boundary \
+        test/p8est_test_per_level_arrays \
         test/p8est_test_conn_transformation \
         test/p8est_test_iterate test/p8est_test_lnodes \
         test/p8est_test_search test/p8est_test_brick \
@@ -81,6 +83,7 @@ test_p4est_test_load_SOURCES = test/test_load2.c
 test_p4est_test_ghost_SOURCES = test/test_ghost2.c
 test_p4est_test_mesh_bijective_SOURCES = test/test_mesh_bijective2.c
 test_p4est_test_mesh_parallel_boundary_SOURCES = test/test_mesh_parallel_boundary2.c
+test_p4est_test_per_level_arrays_SOURCES = test/test_per_level_arrays2.c
 test_p4est_test_conn_transformation_SOURCES = test/test_conn_transformation2.c
 test_p4est_test_iterate_SOURCES = test/test_iterate2.c
 test_p4est_test_lnodes_SOURCES = test/test_lnodes2.c
@@ -120,6 +123,7 @@ test_p8est_test_load_SOURCES = test/test_load3.c
 test_p8est_test_ghost_SOURCES = test/test_ghost3.c
 test_p8est_test_mesh_bijective_SOURCES = test/test_mesh_bijective3.c
 test_p8est_test_mesh_parallel_boundary_SOURCES = test/test_mesh_parallel_boundary3.c
+test_p8est_test_per_level_arrays_SOURCES = test/test_per_level_arrays3.c
 test_p8est_test_conn_transformation_SOURCES = test/test_conn_transformation3.c
 test_p8est_test_brick_SOURCES = test/test_brick3.c
 test_p8est_test_iterate_SOURCES = test/test_iterate3.c
@@ -168,6 +172,7 @@ LINT_CSOURCES += \
         $(test_p4est_test_ghost_SOURCES) \
         $(test_p4est_test_mesh_bijective_SOURCES) \
         $(test_p4est_test_mesh_parallel_boundary_SOURCES) \
+        $(test_p4est_test_per_level_arrays_SOURCES) \
         $(test_p4est_test_conn_transformation_SOURCES) \
         $(test_p4est_test_iterate_SOURCES) \
         $(test_p4est_test_lnodes_SOURCES) \
@@ -198,6 +203,7 @@ LINT_CSOURCES += \
         $(test_p8est_test_ghost_SOURCES) \
         $(test_p8est_test_mesh_bijective_SOURCES) \
         $(test_p8est_test_mesh_parallel_boundary_SOURCES) \
+        $(test_p8est_test_per_level_arrays_SOURCES) \
         $(test_p8est_test_conn_transformation_SOURCES) \
         $(test_p8est_test_brick_SOURCES) \
         $(test_p8est_test_iterate_SOURCES) \
