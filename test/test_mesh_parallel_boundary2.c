@@ -40,6 +40,7 @@
  * \param[in] p4est     The forest.
  * \param[in] ghost     Ghost layer.
  * \param[in] mesh      Neighbor information about forest and ghost layer.
+ *                      Must contain information about parallel boundary.
  */
 int
 check_consistency_with_mirrors (p4est_t * p4est, p4est_ghost_t * ghost,
@@ -49,6 +50,8 @@ check_consistency_with_mirrors (p4est_t * p4est, p4est_ghost_t * ghost,
   int                 count_mirrors = 0;
   int                 qid;
   p4est_quadrant_t   *q, *m;
+
+  P4EST_ASSERT (mesh->parallel_boundary != 0);
 
   for (i = 0; i < ghost->mirrors.elem_count; ++i) {
     qid = mesh->mirror_qid[i];
@@ -75,6 +78,7 @@ check_consistency_with_mirrors (p4est_t * p4est, p4est_ghost_t * ghost,
  * \param[in] p4est     The forest.
  * \param[in] ghost     Ghost layer.
  * \param[in] mesh      Neighbor information about forest and ghost layer.
+ *                      Must contain information about parallel boundary.
  */
 int
 check_parallel_boundary_flag_is_valid (p4est_t * p4est, p4est_ghost_t * ghost,
@@ -87,6 +91,8 @@ check_parallel_boundary_flag_is_valid (p4est_t * p4est, p4est_ghost_t * ghost,
   sc_array_t         *neighboring_qids;
   int                 neighbor_qid;
   int                 n_ghost_neighbors;
+
+  P4EST_ASSERT (mesh->parallel_boundary != 0);
 
   switch (ghost->btype) {
   case P4EST_CONNECT_FACE:
@@ -255,6 +261,7 @@ test_mesh_two_trees (p4est_t * p4est, p4est_connectivity_t * conn,
 
         /* check mesh */
         check_consistency_with_mirrors (p4est, ghost, mesh);
+        check_parallel_boundary_flag_is_valid(p4est, ghost, mesh);
 
         /* cleanup */
         p4est_ghost_destroy (ghost);
@@ -314,6 +321,7 @@ test_mesh_multiple_trees_brick (p4est_t * p4est, p4est_connectivity_t * conn,
 
   /* check mesh */
   check_consistency_with_mirrors (p4est, ghost, mesh);
+  check_parallel_boundary_flag_is_valid(p4est, ghost, mesh);
 
   /* cleanup */
   p4est_ghost_destroy (ghost);
@@ -362,6 +370,7 @@ test_saved_tree (p4est_t * p4est, p4est_connectivity_t * conn,
 
   /* check mesh */
   check_consistency_with_mirrors (p4est, ghost, mesh);
+  check_parallel_boundary_flag_is_valid(p4est, ghost, mesh);
 
   /* cleanup */
   p4est_ghost_destroy (ghost);
