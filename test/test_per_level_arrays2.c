@@ -100,6 +100,10 @@ int
 test_mesh_one_tree (p4est_t * p4est, p4est_connectivity_t * conn,
                     int8_t periodic, sc_MPI_Comm mpicomm)
 {
+  int                 minLevel = 3;
+  p4est_connect_type_t btype = P4EST_CONNECT_FULL;
+  p4est_ghost_t      *ghost;
+  p4est_mesh_t       *mesh;
   /* ensure that we have null pointers at beginning and end of function */
   P4EST_ASSERT (p4est == NULL);
   P4EST_ASSERT (conn == NULL);
@@ -112,20 +116,13 @@ test_mesh_one_tree (p4est_t * p4est, p4est_connectivity_t * conn,
   conn = periodic == 1 ? p8est_connectivity_new_periodic ()
     : p8est_connectivity_new_unitcube ();
 #endif /* !P4_TO_P8 */
+
   /* setup p4est */
-  int                 minLevel = 3;
   p4est = p4est_new_ext (mpicomm, conn, 0, minLevel, 0, 0, NULL, NULL);
-
-  /* create mesh */
-  p4est_connect_type_t btype = P4EST_CONNECT_FULL;
-
   p4est_balance (p4est, btype, NULL);
 
-  p4est_ghost_t      *ghost = p4est_ghost_new (p4est, btype);
-  p4est_mesh_t       *mesh =
-    p4est_mesh_new_ext (p4est, ghost, 1, 1, 1, btype);
-
-  /* check mesh */
+  ghost = p4est_ghost_new (p4est, btype);
+  mesh = p4est_mesh_new_ext (p4est, ghost, 1, 1, 1, btype);
   check_consistency_of_level_array (p4est, ghost, mesh);
 
   /* cleanup */
@@ -136,8 +133,6 @@ test_mesh_one_tree (p4est_t * p4est, p4est_connectivity_t * conn,
 
   conn = 0;
   p4est = 0;
-  P4EST_ASSERT (p4est == NULL);
-  P4EST_ASSERT (conn == NULL);
 
   return 0;
 }
@@ -151,10 +146,15 @@ int
 test_mesh_two_trees (p4est_t * p4est, p4est_connectivity_t * conn,
                      sc_MPI_Comm mpicomm)
 {
+  int                 conn_face_tree1, conn_face_tree2, orientation;
+  int                 minLevel = 3;
+  p4est_connect_type_t btype = P4EST_CONNECT_FULL;
+  p4est_ghost_t      *ghost;
+  p4est_mesh_t       *mesh;
+
   /* ensure that we have null pointers at beginning and end of function */
   P4EST_ASSERT (p4est == NULL);
   P4EST_ASSERT (conn == NULL);
-  int                 conn_face_tree1, conn_face_tree2, orientation;
   for (conn_face_tree1 = 0; conn_face_tree1 < P4EST_FACES; ++conn_face_tree1) {
     for (conn_face_tree2 = 0; conn_face_tree2 < P4EST_FACES;
          ++conn_face_tree2) {
@@ -168,19 +168,11 @@ test_mesh_two_trees (p4est_t * p4est, p4est_connectivity_t * conn,
           p4est_connectivity_new_twotrees (conn_face_tree1, conn_face_tree2,
                                            orientation);
         /* setup p4est */
-        int                 minLevel = 3;
         p4est = p4est_new_ext (mpicomm, conn, 0, minLevel, 0, 0, NULL, NULL);
-
-        p4est_connect_type_t btype = P4EST_CONNECT_FULL;
-
         p4est_balance (p4est, btype, NULL);
 
-        /* create mesh */
-        p4est_ghost_t      *ghost = p4est_ghost_new (p4est, btype);
-        p4est_mesh_t       *mesh =
-          p4est_mesh_new_ext (p4est, ghost, 1, 1, 1, btype);
-
-        /* check mesh */
+        ghost = p4est_ghost_new (p4est, btype);
+        mesh = p4est_mesh_new_ext (p4est, ghost, 1, 1, 1, btype);
         check_consistency_of_level_array (p4est, ghost, mesh);
 
         /* cleanup */
@@ -191,8 +183,6 @@ test_mesh_two_trees (p4est_t * p4est, p4est_connectivity_t * conn,
 
         conn = 0;
         p4est = 0;
-        P4EST_ASSERT (p4est == NULL);
-        P4EST_ASSERT (conn == NULL);
       }
     }
   }
@@ -212,6 +202,11 @@ int
 test_mesh_multiple_trees_brick (p4est_t * p4est, p4est_connectivity_t * conn,
                                 int8_t periodic, sc_MPI_Comm mpicomm)
 {
+  int                 minLevel = 3;
+  p4est_connect_type_t btype = P4EST_CONNECT_FULL;
+  p4est_ghost_t      *ghost;
+  p4est_mesh_t       *mesh;
+
   /* ensure that we have null pointers at beginning and end of function */
   P4EST_ASSERT (p4est == NULL);
   P4EST_ASSERT (conn == NULL);
@@ -222,20 +217,13 @@ test_mesh_multiple_trees_brick (p4est_t * p4est, p4est_connectivity_t * conn,
 #else /* !P4_TO_P8 */
   conn = p8est_connectivity_new_brick (2, 1, 1, periodic, periodic, periodic);
 #endif /* !P4_TO_P8 */
+
   /* setup p4est */
-  int                 minLevel = 3;
   p4est = p4est_new_ext (mpicomm, conn, 0, minLevel, 0, 0, NULL, NULL);
-
-  p4est_connect_type_t btype = P4EST_CONNECT_FULL;
-
   p4est_balance (p4est, btype, NULL);
 
-  /* create mesh */
-  p4est_ghost_t      *ghost = p4est_ghost_new (p4est, btype);
-  p4est_mesh_t       *mesh =
-    p4est_mesh_new_ext (p4est, ghost, 1, 1, 1, btype);
-
-  /* check mesh */
+  ghost = p4est_ghost_new (p4est, btype);
+  mesh = p4est_mesh_new_ext (p4est, ghost, 1, 1, 1, btype);
   check_consistency_of_level_array (p4est, ghost, mesh);
 
   /* cleanup */
@@ -246,8 +234,6 @@ test_mesh_multiple_trees_brick (p4est_t * p4est, p4est_connectivity_t * conn,
 
   conn = 0;
   p4est = 0;
-  P4EST_ASSERT (p4est == NULL);
-  P4EST_ASSERT (conn == NULL);
 
   return 0;
 }
@@ -272,18 +258,17 @@ test_saved_tree (p4est_t * p4est, p4est_connectivity_t * conn,
                  sc_MPI_Comm mpicomm)
 {
 #ifdef P4_TO_P8
-  p4est = p4est_load ("broken_forest.p4est", mpicomm, 0, 0, 0, &conn);
-
   p4est_connect_type_t btype = P4EST_CONNECT_FULL;
+  p4est_ghost_t      *ghost;
+  p4est_mesh_t       *mesh;
+
+  p4est = p4est_load ("broken_forest.p4est", mpicomm, 0, 0, 0, &conn);
 
   P4EST_ASSERT (p4est_is_balanced (p4est, btype));
 
   /* create mesh */
-  p4est_ghost_t      *ghost = p4est_ghost_new (p4est, btype);
-  p4est_mesh_t       *mesh =
-    p4est_mesh_new_ext (p4est, ghost, 1, 1, 1, btype);
-
-  /* check mesh */
+  ghost = p4est_ghost_new (p4est, btype);
+  mesh = p4est_mesh_new_ext (p4est, ghost, 1, 1, 1, btype);
   check_consistency_of_level_array (p4est, ghost, mesh);
 
   /* cleanup */
@@ -294,8 +279,6 @@ test_saved_tree (p4est_t * p4est, p4est_connectivity_t * conn,
 
   conn = 0;
   p4est = 0;
-  P4EST_ASSERT (p4est == NULL);
-  P4EST_ASSERT (conn == NULL);
 #endif /* P4_TO_P8 */
 
   return 0;
