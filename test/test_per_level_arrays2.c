@@ -98,6 +98,7 @@ check_virtual_level_offsets (p4est_t * p4est, p4est_ghost_t * ghost,
   p4est_locidx_t      qid_real, qid_virt;
   int                 level, quad_per_level;
   int                 offset, offset_old;
+  int                 last_real, last_virtual;
 
   P4EST_ASSERT (mesh->quad_level != 0 && mesh->ghost_level != 0);
   P4EST_ASSERT (virtual->quad_qreal_offset != NULL);
@@ -105,6 +106,8 @@ check_virtual_level_offsets (p4est_t * p4est, p4est_ghost_t * ghost,
   for (level = 0; level < P4EST_QMAXLEVEL + 1; ++level) {
     /* local */
     offset_old = 0;
+    last_real = 0;
+    last_virtual = 0;
     quad_per_level =
       (mesh->quad_level + level)->elem_count + (virtual->virtual_qlevels +
                                                 level)->elem_count;
@@ -121,16 +124,22 @@ check_virtual_level_offsets (p4est_t * p4est, p4est_ghost_t * ghost,
       if (qid_real < qid_virt) {
         offset = virtual->quad_qreal_offset[qid_real];
         P4EST_ASSERT (offset == i_real + P4EST_CHILDREN * i_virt);
-        P4EST_ASSERT (0 == offset || offset_old + P4EST_CHILDREN == offset
-                      || offset_old + 1 == offset);
+        P4EST_ASSERT ((0 == offset)
+                      || (offset_old + P4EST_CHILDREN == offset && last_virtual)
+                      || (offset_old + 1 == offset && last_real));
         ++i_real;
+        last_real = 1;
+        last_virtual = 0;
       }
       else if (qid_virt < qid_real) {
         offset = virtual->quad_qvirtual_offset[qid_virt];
         P4EST_ASSERT (offset == i_real + P4EST_CHILDREN * i_virt);
-        P4EST_ASSERT (0 == offset || offset_old + P4EST_CHILDREN == offset
-                      || offset_old + 1 == offset);
+        P4EST_ASSERT ((0 == offset)
+                      || (offset_old + P4EST_CHILDREN == offset && last_virtual)
+                      || (offset_old + 1 == offset && last_real));
         ++i_virt;
+        last_virtual = 1;
+        last_real = 0;
       }
       else {
         P4EST_ASSERT (INT_MAX == qid_real);
@@ -143,6 +152,8 @@ check_virtual_level_offsets (p4est_t * p4est, p4est_ghost_t * ghost,
       (mesh->ghost_level + level)->elem_count + (virtual->virtual_glevels +
                                                  level)->elem_count;
     offset_old = 0;
+    last_real = 0;
+    last_virtual = 0;
     for (i_real = 0, i_virt = 0; i_real + i_virt < quad_per_level;) {
       qid_real = i_real < (mesh->ghost_level + level)->elem_count ?
         *(p4est_locidx_t *) sc_array_index (mesh->ghost_level + level,
@@ -156,16 +167,22 @@ check_virtual_level_offsets (p4est_t * p4est, p4est_ghost_t * ghost,
       if (qid_real < qid_virt) {
         offset = virtual->quad_greal_offset[qid_real];
         P4EST_ASSERT (offset == i_real + P4EST_CHILDREN * i_virt);
-        P4EST_ASSERT (0 == offset || offset_old + P4EST_CHILDREN == offset
-                      || offset_old + 1 == offset);
+        P4EST_ASSERT ((0 == offset)
+                      || (offset_old + P4EST_CHILDREN == offset && last_virtual)
+                      || (offset_old + 1 == offset && last_real));
         ++i_real;
+        last_real = 1;
+        last_virtual = 0;
       }
       else if (qid_virt < qid_real) {
         offset = virtual->quad_gvirtual_offset[qid_virt];
         P4EST_ASSERT (offset == i_real + P4EST_CHILDREN * i_virt);
-        P4EST_ASSERT (0 == offset || offset_old + P4EST_CHILDREN == offset
-                      || offset_old + 1 == offset);
+        P4EST_ASSERT ((0 == offset)
+                      || (offset_old + P4EST_CHILDREN == offset && last_virtual)
+                      || (offset_old + 1 == offset && last_real));
         ++i_virt;
+        last_virtual = 1;
+        last_real = 0;
       }
       else {
         P4EST_ASSERT (INT_MAX == qid_real);
