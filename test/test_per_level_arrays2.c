@@ -27,10 +27,12 @@
 #include <p4est_extended.h>
 #include <p4est_ghost.h>
 #include <p4est_mesh.h>
+#include <p4est_virtual.h>
 #else /* !P4_TO_P8 */
 #include <p8est_extended.h>
 #include <p8est_ghost.h>
 #include <p8est_mesh.h>
+#include <p8est_virtual.h>
 #endif /* !P4_TO_P8 */
 
 /** Check that all quadrants are found in a per-level traversal.
@@ -88,6 +90,94 @@ check_consistency_of_level_array (p4est_t * p4est, p4est_ghost_t * ghost,
   return 0;
 }
 
+int
+check_virtual_level_offsets (p4est_t * p4est, p4est_ghost_t * ghost,
+                             p4est_mesh_t * mesh, p4est_virtual_t * virtual)
+{
+  int                 i_real, i_virt;
+  p4est_locidx_t      qid_real, qid_virt;
+  int                 level, quad_per_level;
+  int                 offset, offset_old;
+
+  P4EST_ASSERT (mesh->quad_level != 0 && mesh->ghost_level != 0);
+  P4EST_ASSERT (virtual->quad_qreal_offset != NULL);
+
+  for (level = 0; level < P4EST_QMAXLEVEL + 1; ++level) {
+    /* local */
+    offset_old = 0;
+    quad_per_level =
+      (mesh->quad_level + level)->elem_count + (virtual->virtual_qlevels +
+                                                level)->elem_count;
+    for (i_real = 0, i_virt = 0; i_real + i_virt < quad_per_level;) {
+      qid_real = i_real < (mesh->quad_level + level)->elem_count ?
+        *(p4est_locidx_t *) sc_array_index (mesh->quad_level + level,
+                                            i_real) : INT_MAX;
+      qid_virt =
+        i_virt < (virtual->virtual_qlevels + level)->elem_count ?
+        *(p4est_locidx_t *) sc_array_index (virtual->virtual_qlevels + level,
+                                            i_virt) : INT_MAX;
+
+      /* check offset and advance to next quadrant */
+      if (qid_real < qid_virt) {
+        offset = virtual->quad_qreal_offset[qid_real];
+        P4EST_ASSERT (offset == i_real + P4EST_CHILDREN * i_virt);
+        P4EST_ASSERT (0 == offset || offset_old + P4EST_CHILDREN == offset
+                      || offset_old + 1 == offset);
+        ++i_real;
+      }
+      else if (qid_virt < qid_real) {
+        offset = virtual->quad_qvirtual_offset[qid_virt];
+        P4EST_ASSERT (offset == i_real + P4EST_CHILDREN * i_virt);
+        P4EST_ASSERT (0 == offset || offset_old + P4EST_CHILDREN == offset
+                      || offset_old + 1 == offset);
+        ++i_virt;
+      }
+      else {
+        P4EST_ASSERT (INT_MAX == qid_real);
+        P4EST_ASSERT (INT_MAX == qid_virt);
+      }
+      offset_old = offset;
+    }
+    /* ghost */
+    quad_per_level =
+      (mesh->ghost_level + level)->elem_count + (virtual->virtual_glevels +
+                                                 level)->elem_count;
+    offset_old = 0;
+    for (i_real = 0, i_virt = 0; i_real + i_virt < quad_per_level;) {
+      qid_real = i_real < (mesh->ghost_level + level)->elem_count ?
+        *(p4est_locidx_t *) sc_array_index (mesh->ghost_level + level,
+                                            i_real) : INT_MAX;
+      qid_virt =
+        i_virt < (virtual->virtual_glevels + level)->elem_count ?
+        *(p4est_locidx_t *) sc_array_index (virtual->virtual_glevels + level,
+                                            i_virt) : INT_MAX;
+
+      /* check offset and advance to next quadrant */
+      if (qid_real < qid_virt) {
+        offset = virtual->quad_greal_offset[qid_real];
+        P4EST_ASSERT (offset == i_real + P4EST_CHILDREN * i_virt);
+        P4EST_ASSERT (0 == offset || offset_old + P4EST_CHILDREN == offset
+                      || offset_old + 1 == offset);
+        ++i_real;
+      }
+      else if (qid_virt < qid_real) {
+        offset = virtual->quad_gvirtual_offset[qid_virt];
+        P4EST_ASSERT (offset == i_real + P4EST_CHILDREN * i_virt);
+        P4EST_ASSERT (0 == offset || offset_old + P4EST_CHILDREN == offset
+                      || offset_old + 1 == offset);
+        ++i_virt;
+      }
+      else {
+        P4EST_ASSERT (INT_MAX == qid_real);
+        P4EST_ASSERT (INT_MAX == qid_virt);
+      }
+      offset_old = offset;
+    }
+  }
+
+  return 0;
+}
+
 /* Function for testing p4est-mesh for a single tree scenario
  *
  * \param [in] p4est     The forest.
@@ -104,6 +194,7 @@ test_mesh_one_tree (p4est_t * p4est, p4est_connectivity_t * conn,
   p4est_connect_type_t btype = P4EST_CONNECT_FULL;
   p4est_ghost_t      *ghost;
   p4est_mesh_t       *mesh;
+  p4est_virtual_t    *virtual;
   /* ensure that we have null pointers at beginning and end of function */
   P4EST_ASSERT (p4est == NULL);
   P4EST_ASSERT (conn == NULL);
@@ -123,11 +214,14 @@ test_mesh_one_tree (p4est_t * p4est, p4est_connectivity_t * conn,
 
   ghost = p4est_ghost_new (p4est, btype);
   mesh = p4est_mesh_new_ext (p4est, ghost, 1, 1, 1, btype);
+  virtual = p4est_virtual_new_ext (p4est, ghost, mesh, btype, 1);
   check_consistency_of_level_array (p4est, ghost, mesh);
+  check_virtual_level_offsets (p4est, ghost, mesh, virtual);
 
   /* cleanup */
-  p4est_ghost_destroy (ghost);
+  p4est_virtual_destroy (virtual);
   p4est_mesh_destroy (mesh);
+  p4est_ghost_destroy (ghost);
   p4est_destroy (p4est);
   p4est_connectivity_destroy (conn);
 
@@ -151,6 +245,7 @@ test_mesh_two_trees (p4est_t * p4est, p4est_connectivity_t * conn,
   p4est_connect_type_t btype = P4EST_CONNECT_FULL;
   p4est_ghost_t      *ghost;
   p4est_mesh_t       *mesh;
+  p4est_virtual_t    *virtual;
 
   /* ensure that we have null pointers at beginning and end of function */
   P4EST_ASSERT (p4est == NULL);
@@ -173,11 +268,14 @@ test_mesh_two_trees (p4est_t * p4est, p4est_connectivity_t * conn,
 
         ghost = p4est_ghost_new (p4est, btype);
         mesh = p4est_mesh_new_ext (p4est, ghost, 1, 1, 1, btype);
+        virtual = p4est_virtual_new_ext (p4est, ghost, mesh, btype, 1);
         check_consistency_of_level_array (p4est, ghost, mesh);
+        check_virtual_level_offsets (p4est, ghost, mesh, virtual);
 
         /* cleanup */
-        p4est_ghost_destroy (ghost);
+        p4est_virtual_destroy (virtual);
         p4est_mesh_destroy (mesh);
+        p4est_ghost_destroy (ghost);
         p4est_destroy (p4est);
         p4est_connectivity_destroy (conn);
 
@@ -206,6 +304,7 @@ test_mesh_multiple_trees_brick (p4est_t * p4est, p4est_connectivity_t * conn,
   p4est_connect_type_t btype = P4EST_CONNECT_FULL;
   p4est_ghost_t      *ghost;
   p4est_mesh_t       *mesh;
+  p4est_virtual_t    *virtual;
 
   /* ensure that we have null pointers at beginning and end of function */
   P4EST_ASSERT (p4est == NULL);
@@ -224,11 +323,14 @@ test_mesh_multiple_trees_brick (p4est_t * p4est, p4est_connectivity_t * conn,
 
   ghost = p4est_ghost_new (p4est, btype);
   mesh = p4est_mesh_new_ext (p4est, ghost, 1, 1, 1, btype);
+  virtual = p4est_virtual_new_ext (p4est, ghost, mesh, btype, 1);
   check_consistency_of_level_array (p4est, ghost, mesh);
+  check_virtual_level_offsets (p4est, ghost, mesh, virtual);
 
   /* cleanup */
-  p4est_ghost_destroy (ghost);
+  p4est_virtual_destroy (virtual);
   p4est_mesh_destroy (mesh);
+  p4est_ghost_destroy (ghost);
   p4est_destroy (p4est);
   p4est_connectivity_destroy (conn);
 
@@ -261,6 +363,7 @@ test_saved_tree (p4est_t * p4est, p4est_connectivity_t * conn,
   p4est_connect_type_t btype = P4EST_CONNECT_FULL;
   p4est_ghost_t      *ghost;
   p4est_mesh_t       *mesh;
+  p4est_virtual_t    *virtual;
 
   p4est = p4est_load ("broken_forest.p4est", mpicomm, 0, 0, 0, &conn);
 
@@ -269,11 +372,14 @@ test_saved_tree (p4est_t * p4est, p4est_connectivity_t * conn,
   /* create mesh */
   ghost = p4est_ghost_new (p4est, btype);
   mesh = p4est_mesh_new_ext (p4est, ghost, 1, 1, 1, btype);
+  virtual = p4est_virtual_new_ext (p4est, ghost, mesh, btype, 1);
   check_consistency_of_level_array (p4est, ghost, mesh);
+  check_virtual_level_offsets (p4est, ghost, mesh, virtual);
 
   /* cleanup */
-  p4est_ghost_destroy (ghost);
+  p4est_virtual_destroy (virtual);
   p4est_mesh_destroy (mesh);
+  p4est_ghost_destroy (ghost);
   p4est_destroy (p4est);
   p4est_connectivity_destroy (conn);
 
