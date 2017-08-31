@@ -24,141 +24,66 @@
 #include <inttypes.h>
 #include <unistd.h>
 #ifndef P4_TO_P8
-#include <p4est_bits.h>
 #include <p4est_extended.h>
 #include <p4est_ghost.h>
 #include <p4est_mesh.h>
 #else /* !P4_TO_P8 */
-#include <p8est_bits.h>
 #include <p8est_extended.h>
 #include <p8est_ghost.h>
 #include <p8est_mesh.h>
 #endif /* !P4_TO_P8 */
 
-/** Check that indices in parallel boundary and mirrors are consistent.
+/** Check that all quadrants are found in a per-level traversal.
  *
  * \param[in] p4est     The forest.
  * \param[in] ghost     Ghost layer.
  * \param[in] mesh      Neighbor information about forest and ghost layer.
- *                      Must contain information about parallel boundary.
+ *                      Must contain level information
  */
 int
-check_consistency_with_mirrors (p4est_t * p4est, p4est_ghost_t * ghost,
-                                p4est_mesh_t * mesh)
+check_consistency_of_level_array (p4est_t * p4est, p4est_ghost_t * ghost,
+                                  p4est_mesh_t * mesh)
 {
-  size_t              i;
-  int                 count_mirrors = 0;
-  int                 qid;
-  p4est_quadrant_t   *q, *m;
+  p4est_locidx_t      lq, gq;
+  int                 level, i;
+  p4est_locidx_t      qid;
+  p4est_locidx_t     *found_local, *found_ghost;
+  p4est_quadrant_t   *q;
 
-  P4EST_ASSERT (mesh->parallel_boundary != 0);
+  P4EST_ASSERT (mesh->quad_level != 0 && mesh->ghost_level != 0);
 
-  for (i = 0; i < ghost->mirrors.elem_count; ++i) {
-    qid = mesh->mirror_qid[i];
-    P4EST_ASSERT (0 <= qid && qid < mesh->local_num_quadrants);
-    P4EST_ASSERT ((p4est_locidx_t) i == mesh->parallel_boundary[qid]);
-  }
-  for (i = 0; i < (size_t) mesh->local_num_quadrants; ++i) {
-    if (-1 < mesh->parallel_boundary[i]) {
-      q = p4est_mesh_get_quadrant (p4est, mesh, i);
-      m =
-        (p4est_quadrant_t *) sc_array_index (&ghost->mirrors, count_mirrors);
-      // check for equality: position and level has to match
-      P4EST_ASSERT (p4est_quadrant_is_equal (q, m));
-      ++count_mirrors;
+  lq = mesh->local_num_quadrants;
+  gq = mesh->ghost_num_quadrants;
+
+  found_local = P4EST_ALLOC_ZERO (p4est_locidx_t, lq);
+  found_ghost = P4EST_ALLOC_ZERO (p4est_locidx_t, gq);
+
+  for (level = 0; level < P4EST_QMAXLEVEL + 1; ++level) {
+    for (i = 0; i < (mesh->quad_level + level)->elem_count; ++i) {
+      qid = *(p4est_locidx_t *) sc_array_index (mesh->quad_level + level, i);
+      P4EST_ASSERT (found_local[qid] == 0);
+      found_local[qid] = 1;
+      q = p4est_mesh_get_quadrant (p4est, mesh, qid);
+      P4EST_ASSERT (level == q->level);
+    }
+    for (i = 0; i < (mesh->ghost_level + level)->elem_count; ++i) {
+      qid = *(p4est_locidx_t *) sc_array_index (mesh->ghost_level + level, i);
+      P4EST_ASSERT (found_ghost[qid] == 0);
+      found_ghost[qid] = 1;
+      q = p4est_quadrant_array_index (&ghost->ghosts, qid);
+      P4EST_ASSERT (level == q->level);
     }
   }
-  return 0;
-}
 
-/** Check that all mirrors are detected correctly, i.e. if a quadrant has
- * neighbors in the ghost layer, parallel boundary must be set.  If all
- * neighbors are owned by the same rank, the flag must not be set.
- *
- * \param[in] p4est     The forest.
- * \param[in] ghost     Ghost layer.
- * \param[in] mesh      Neighbor information about forest and ghost layer.
- *                      Must contain information about parallel boundary.
- */
-int
-check_parallel_boundary_flag_is_valid (p4est_t * p4est, p4est_ghost_t * ghost,
-                                       p4est_mesh_t * mesh)
-{
-  int                 quad, norm_quad;
-  int                 i, imax, j;
-  int                 lq = mesh->local_num_quadrants;
-  int                 gq = mesh->ghost_num_quadrants;
-  sc_array_t         *neighboring_qids;
-  int                 neighbor_qid;
-  int                 n_ghost_neighbors;
-
-  P4EST_ASSERT (mesh->parallel_boundary != 0);
-
-  switch (ghost->btype) {
-  case P4EST_CONNECT_FACE:
-    imax = P4EST_FACES;
-    break;
-#ifdef P4_TO_P8
-  case P8EST_CONNECT_EDGE:
-    imax = P4EST_FACES + P8EST_EDGES;
-    break;
-#endif /* P4_TO_P8 */
-  case P4EST_CONNECT_FULL:
-#ifdef P4_TO_P8
-    imax = P4EST_FACES + P8EST_EDGES + P4EST_CHILDREN;
-#else /* P4_TO_P8 */
-    imax = P4EST_FACES + P4EST_CHILDREN;
-#endif /* P4_TO_P8 */
-    break;
-  default:
-    SC_ABORT_NOT_REACHED ();
+  for (qid = 0; qid < lq; ++qid) {
+    P4EST_ASSERT (1 == found_local[qid]);
+  }
+  for (qid = 0; qid < gq; ++qid) {
+    P4EST_ASSERT (1 == found_ghost[qid]);
   }
 
-  /** allocate containers */
-  neighboring_qids = sc_array_new (sizeof (int));
-
-  for (quad = 0; quad < p4est->global_num_quadrants; ++quad) {
-    sc_MPI_Barrier (p4est->mpicomm);
-    /** loop over all quads, verify only on the processor owning the respective
-        quadrant. */
-    if (p4est->global_first_quadrant[p4est->mpirank] <= quad &&
-        quad < p4est->global_first_quadrant[p4est->mpirank + 1]) {
-      /** norm global quad index to local index */
-      norm_quad = quad - p4est->global_first_quadrant[p4est->mpirank];
-      /**(quadrant must be local by design) */
-      P4EST_ASSERT (0 <= norm_quad && norm_quad < lq);
-      n_ghost_neighbors = 0;
-
-      for (i = 0; i < imax; ++i) {
-        /** empty containers */
-        sc_array_truncate (neighboring_qids);
-
-        /** search neighbors */
-        p4est_mesh_get_neighbors (p4est, ghost, mesh, norm_quad, i, NULL,
-                                  NULL, neighboring_qids);
-
-        /** inspect obtained neighbors */
-        for (j = 0; j < (int) neighboring_qids->elem_count; ++j) {
-          neighbor_qid = *(int *) sc_array_index (neighboring_qids, j);
-
-          P4EST_ASSERT (0 <= neighbor_qid && neighbor_qid < (lq + gq));
-          if (lq <= neighbor_qid && neighbor_qid < (lq + gq)) {
-            ++n_ghost_neighbors;
-          }
-        }
-      }
-      if (n_ghost_neighbors) {
-        P4EST_ASSERT (-1 < mesh->parallel_boundary[norm_quad]
-                      && mesh->parallel_boundary[norm_quad] <
-                      (p4est_locidx_t) ghost->mirrors.elem_count);
-      }
-      else {
-        P4EST_ASSERT (-1 == mesh->parallel_boundary[norm_quad]);
-      }
-    }
-  }
-  /** de-allocate containers */
-  sc_array_destroy (neighboring_qids);
+  P4EST_FREE (found_local);
+  P4EST_FREE (found_ghost);
 
   return 0;
 }
@@ -178,9 +103,6 @@ test_mesh_one_tree (p4est_t * p4est, p4est_connectivity_t * conn,
   /* ensure that we have null pointers at beginning and end of function */
   P4EST_ASSERT (p4est == NULL);
   P4EST_ASSERT (conn == NULL);
-
-  P4EST_VERBOSEF ("Check if parallel boundary is detected properly for single"
-                  " tree, periodic: %i\n", periodic);
 
   /* create connectivity */
 #ifndef P4_TO_P8
@@ -204,8 +126,7 @@ test_mesh_one_tree (p4est_t * p4est, p4est_connectivity_t * conn,
     p4est_mesh_new_ext (p4est, ghost, 1, 1, 1, btype);
 
   /* check mesh */
-  check_consistency_with_mirrors (p4est, ghost, mesh);
-  check_parallel_boundary_flag_is_valid (p4est, ghost, mesh);
+  check_consistency_of_level_array (p4est, ghost, mesh);
 
   /* cleanup */
   p4est_ghost_destroy (ghost);
@@ -260,8 +181,7 @@ test_mesh_two_trees (p4est_t * p4est, p4est_connectivity_t * conn,
           p4est_mesh_new_ext (p4est, ghost, 1, 1, 1, btype);
 
         /* check mesh */
-        check_consistency_with_mirrors (p4est, ghost, mesh);
-        check_parallel_boundary_flag_is_valid(p4est, ghost, mesh);
+        check_consistency_of_level_array (p4est, ghost, mesh);
 
         /* cleanup */
         p4est_ghost_destroy (ghost);
@@ -296,10 +216,6 @@ test_mesh_multiple_trees_brick (p4est_t * p4est, p4est_connectivity_t * conn,
   P4EST_ASSERT (p4est == NULL);
   P4EST_ASSERT (conn == NULL);
 
-  P4EST_VERBOSEF
-    ("Check if parallel boundary is detected properly for brick of"
-     " trees, periodic: %i\n", periodic);
-
   /* create connectivity */
 #ifndef P4_TO_P8
   conn = p4est_connectivity_new_brick (2, 1, periodic, periodic);
@@ -320,8 +236,7 @@ test_mesh_multiple_trees_brick (p4est_t * p4est, p4est_connectivity_t * conn,
     p4est_mesh_new_ext (p4est, ghost, 1, 1, 1, btype);
 
   /* check mesh */
-  check_consistency_with_mirrors (p4est, ghost, mesh);
-  check_parallel_boundary_flag_is_valid(p4est, ghost, mesh);
+  check_consistency_of_level_array (p4est, ghost, mesh);
 
   /* cleanup */
   p4est_ghost_destroy (ghost);
@@ -369,8 +284,7 @@ test_saved_tree (p4est_t * p4est, p4est_connectivity_t * conn,
     p4est_mesh_new_ext (p4est, ghost, 1, 1, 1, btype);
 
   /* check mesh */
-  check_consistency_with_mirrors (p4est, ghost, mesh);
-  check_parallel_boundary_flag_is_valid(p4est, ghost, mesh);
+  check_consistency_of_level_array (p4est, ghost, mesh);
 
   /* cleanup */
   p4est_ghost_destroy (ghost);
