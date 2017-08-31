@@ -301,7 +301,7 @@ p4est_virtual_destroy (p4est_virtual_t * virtual)
 size_t
 p4est_virtual_memory_used (p4est_virtual_t * virtual)
 {
-  size_t              i, lqz, ngz;
+  size_t              lqz, ngz;
   int                 level;
   size_t              mem_flags = 0;
   size_t              mem_offset = 0;
