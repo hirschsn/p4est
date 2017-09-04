@@ -61,14 +61,14 @@ check_consistency_of_level_array (p4est_t * p4est, p4est_ghost_t * ghost,
   found_ghost = P4EST_ALLOC_ZERO (p4est_locidx_t, gq);
 
   for (level = 0; level < P4EST_QMAXLEVEL + 1; ++level) {
-    for (i = 0; i < (mesh->quad_level + level)->elem_count; ++i) {
+    for (i = 0; i < (int) (mesh->quad_level + level)->elem_count; ++i) {
       qid = *(p4est_locidx_t *) sc_array_index (mesh->quad_level + level, i);
       P4EST_ASSERT (found_local[qid] == 0);
       found_local[qid] = 1;
       q = p4est_mesh_get_quadrant (p4est, mesh, qid);
       P4EST_ASSERT (level == q->level);
     }
-    for (i = 0; i < (mesh->ghost_level + level)->elem_count; ++i) {
+    for (i = 0; i < (int) (mesh->ghost_level + level)->elem_count; ++i) {
       qid = *(p4est_locidx_t *) sc_array_index (mesh->ghost_level + level, i);
       P4EST_ASSERT (found_ghost[qid] == 0);
       found_ghost[qid] = 1;
@@ -113,11 +113,11 @@ check_virtual_level_offsets (p4est_t * p4est, p4est_ghost_t * ghost,
       (mesh->quad_level + level)->elem_count +
       (virtual_quads->virtual_qlevels + level)->elem_count;
     for (i_real = 0, i_virt = 0; i_real + i_virt < quad_per_level;) {
-      qid_real = i_real < (mesh->quad_level + level)->elem_count ?
+      qid_real = i_real < (int) (mesh->quad_level + level)->elem_count ?
         *(p4est_locidx_t *) sc_array_index (mesh->quad_level + level,
                                             i_real) : INT_MAX;
       qid_virt =
-        i_virt < (virtual_quads->virtual_qlevels + level)->elem_count ?
+        i_virt < (int) (virtual_quads->virtual_qlevels + level)->elem_count ?
         *(p4est_locidx_t *) sc_array_index (virtual_quads->virtual_qlevels +
                                             level, i_virt) : INT_MAX;
 
@@ -158,11 +158,11 @@ check_virtual_level_offsets (p4est_t * p4est, p4est_ghost_t * ghost,
     last_real = 0;
     last_virtual = 0;
     for (i_real = 0, i_virt = 0; i_real + i_virt < quad_per_level;) {
-      qid_real = i_real < (mesh->ghost_level + level)->elem_count ?
+      qid_real = i_real < (int) (mesh->ghost_level + level)->elem_count ?
         *(p4est_locidx_t *) sc_array_index (mesh->ghost_level + level,
                                             i_real) : INT_MAX;
       qid_virt =
-        i_virt < (virtual_quads->virtual_glevels + level)->elem_count ?
+        i_virt < (int) (virtual_quads->virtual_glevels + level)->elem_count ?
         *(p4est_locidx_t *) sc_array_index (virtual_quads->virtual_glevels +
                                             level, i_virt) : INT_MAX;
 
