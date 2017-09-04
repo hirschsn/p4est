@@ -118,7 +118,7 @@ set_limits (int direction, p4est_connect_type_t btype,
 
 void
 check_pos_virtual (p4est_t * p4est, p4est_ghost_t * ghost,
-                   p4est_mesh_t * mesh, p4est_virtual_t * virtual)
+                   p4est_mesh_t * mesh, p4est_virtual_t * virtual_quads)
 {
   int                 quad, norm_quad;
   int                 i, imax, j;
@@ -171,7 +171,7 @@ check_pos_virtual (p4est_t * p4est, p4est_ghost_t * ghost,
       /** norm global quad index to local index */
       norm_quad = quad - p4est->global_first_quadrant[p4est->mpirank];
       P4EST_ASSERT (0 <= norm_quad && norm_quad < lq);
-      current_quad = p4est_mesh_get_quadrant(p4est, mesh, norm_quad);
+      current_quad = p4est_mesh_get_quadrant (p4est, mesh, norm_quad);
 
       needs_virtuals = 0;
 
@@ -187,8 +187,9 @@ check_pos_virtual (p4est_t * p4est, p4est_ghost_t * ghost,
                     &u_half_size);
 
         /** search neighbors */
-        p4est_mesh_get_neighbors (p4est, ghost, mesh, norm_quad, i, neighboring_quads,
-                                  neighboring_encs, neighboring_qids);
+        p4est_mesh_get_neighbors (p4est, ghost, mesh, norm_quad, i,
+                                  neighboring_quads, neighboring_encs,
+                                  neighboring_qids);
         P4EST_ASSERT (neighboring_quads->elem_count ==
                       neighboring_qids->elem_count);
         P4EST_ASSERT (neighboring_encs->elem_count ==
@@ -196,7 +197,8 @@ check_pos_virtual (p4est_t * p4est, p4est_ghost_t * ghost,
 
         /** inspect obtained neighbors */
         for (j = 0; j < (int) neighboring_qids->elem_count; ++j) {
-          neighbor_quad = *(p4est_quadrant_t **) sc_array_index (neighboring_quads, j);
+          neighbor_quad =
+            *(p4est_quadrant_t **) sc_array_index (neighboring_quads, j);
           neighbor_qid = *(int *) sc_array_index (neighboring_qids, j);
           neighbor_enc = *(int *) sc_array_index (neighboring_encs, j);
 
@@ -204,13 +206,12 @@ check_pos_virtual (p4est_t * p4est, p4est_ghost_t * ghost,
               || (current_quad->level == neighbor_quad->level + 1)) {
             /* check if ghost quadrant has virtual quadrants */
             if (lq <= neighbor_qid && neighbor_qid < (lq + gq)) {
-              P4EST_ASSERT (virtual->virtual_gflags[(neighbor_qid - lq)] !=
-                            -1);
+              P4EST_ASSERT (virtual_quads->
+                            virtual_gflags[(neighbor_qid - lq)] != -1);
             }
           }
           else if ((l_half_size <= neighbor_enc && neighbor_enc < u_half_size)
-              || (current_quad->level + 1 == neighbor_quad->level))
-            {
+                   || (current_quad->level + 1 == neighbor_quad->level)) {
             ++needs_virtuals;
           }
         }
@@ -218,10 +219,10 @@ check_pos_virtual (p4est_t * p4est, p4est_ghost_t * ghost,
       /* if we need virtuals virtuals need to be build and if we do not need
          them they must not be present. */
       if (needs_virtuals) {
-        P4EST_ASSERT (-1 != virtual->virtual_qflags[norm_quad]);
+        P4EST_ASSERT (-1 != virtual_quads->virtual_qflags[norm_quad]);
       }
       else {
-        P4EST_ASSERT (-1 == virtual->virtual_qflags[norm_quad]);
+        P4EST_ASSERT (-1 == virtual_quads->virtual_qflags[norm_quad]);
       }
     }
   }
@@ -247,7 +248,7 @@ test_mesh_one_tree (p4est_t * p4est, p4est_connectivity_t * conn,
   p4est_connect_type_t btype = P4EST_CONNECT_FULL;
   p4est_ghost_t      *ghost;
   p4est_mesh_t       *mesh;
-  p4est_virtual_t    *virtual;
+  p4est_virtual_t    *virtual_quads;
 
   /* ensure that we have null pointers at beginning and end of function */
   P4EST_ASSERT (p4est == NULL);
@@ -270,13 +271,13 @@ test_mesh_one_tree (p4est_t * p4est, p4est_connectivity_t * conn,
 
   ghost = p4est_ghost_new (p4est, btype);
   mesh = p4est_mesh_new_ext (p4est, ghost, 1, 1, 1, btype);
-  virtual = p4est_virtual_new (p4est, ghost, mesh, btype);
+  virtual_quads = p4est_virtual_new (p4est, ghost, mesh, btype);
 
   /* check mesh */
-  check_pos_virtual (p4est, ghost, mesh, virtual);
+  check_pos_virtual (p4est, ghost, mesh, virtual_quads);
 
   /* cleanup */
-  p4est_virtual_destroy (virtual);
+  p4est_virtual_destroy (virtual_quads);
   p4est_mesh_destroy (mesh);
   p4est_ghost_destroy (ghost);
   p4est_destroy (p4est);
@@ -304,7 +305,7 @@ test_mesh_two_trees (p4est_t * p4est, p4est_connectivity_t * conn,
   p4est_connect_type_t btype = P4EST_CONNECT_FULL;
   p4est_ghost_t      *ghost;
   p4est_mesh_t       *mesh;
-  p4est_virtual_t    *virtual;
+  p4est_virtual_t    *virtual_quads;
 
   /* ensure that we have null pointers at beginning and end of function */
   P4EST_ASSERT (p4est == NULL);
@@ -325,13 +326,13 @@ test_mesh_two_trees (p4est_t * p4est, p4est_connectivity_t * conn,
         /* create mesh */
         ghost = p4est_ghost_new (p4est, btype);
         mesh = p4est_mesh_new_ext (p4est, ghost, 1, 1, 1, btype);
-        virtual = p4est_virtual_new (p4est, ghost, mesh, btype);
+        virtual_quads = p4est_virtual_new (p4est, ghost, mesh, btype);
 
         /* check mesh */
-        check_pos_virtual (p4est, ghost, mesh, virtual);
+        check_pos_virtual (p4est, ghost, mesh, virtual_quads);
 
         /* cleanup */
-        p4est_virtual_destroy (virtual);
+        p4est_virtual_destroy (virtual_quads);
         p4est_mesh_destroy (mesh);
         p4est_ghost_destroy (ghost);
         p4est_destroy (p4est);
@@ -364,7 +365,7 @@ test_mesh_multiple_trees_brick (p4est_t * p4est, p4est_connectivity_t * conn,
   p4est_connect_type_t btype = P4EST_CONNECT_FULL;
   p4est_ghost_t      *ghost;
   p4est_mesh_t       *mesh;
-  p4est_virtual_t    *virtual;
+  p4est_virtual_t    *virtual_quads;
 
   /* ensure that we have null pointers at beginning and end of function */
   P4EST_ASSERT (p4est == NULL);
@@ -384,13 +385,13 @@ test_mesh_multiple_trees_brick (p4est_t * p4est, p4est_connectivity_t * conn,
   /* create mesh */
   ghost = p4est_ghost_new (p4est, btype);
   mesh = p4est_mesh_new_ext (p4est, ghost, 1, 1, 1, btype);
-  virtual = p4est_virtual_new (p4est, ghost, mesh, btype);
+  virtual_quads = p4est_virtual_new (p4est, ghost, mesh, btype);
 
   /* check mesh */
-  check_pos_virtual (p4est, ghost, mesh, virtual);
+  check_pos_virtual (p4est, ghost, mesh, virtual_quads);
 
   /* cleanup */
-  p4est_virtual_destroy (virtual);
+  p4est_virtual_destroy (virtual_quads);
   p4est_mesh_destroy (mesh);
   p4est_ghost_destroy (ghost);
   p4est_destroy (p4est);

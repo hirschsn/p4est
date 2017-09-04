@@ -148,17 +148,46 @@ p4est_virtual_t    *p4est_virtual_new (p4est_t * p4est, p4est_ghost_t * ghost,
  * \param [in] virtual   Virtual structure previously created by
  *                       p4est_virtual_new or p4est_virtual_new_ext.
  */
-void                p4est_virtual_destroy (p4est_virtual_t * virtual);
+void                p4est_virtual_destroy (p4est_virtual_t * virtual_quads);
 
 /** Calculate the memory usage of the virtual structure.
  * \param[in] virtual   Virtual structure
  * \return              Memory used in bytes.
  */
-size_t              p4est_virtual_memory_used (p4est_virtual_t * virtual);
+size_t              p4est_virtual_memory_used (p4est_virtual_t *
+                                               virtual_quads);
 
 /* -------------------------------------------------------------------------- */
 /* |                             Ghost exchange                             | */
 /* -------------------------------------------------------------------------- */
+typedef struct
+{
+
+} p4est_virtual_ghost_t;
+
+/** Transient storage for asynchronous ghost exchange. */
+typedef struct p4est_ghostvirt_exchange
+{
+  int                 is_levels;
+  p4est_t            *p4est;
+  p4est_virtual_ghost_t *virtual_ghost;
+  int                 minlevel, maxlevel;
+  size_t              data_size;
+  void              **ghost_data;
+  int                *qactive, *qbuffer;
+  sc_array_t          requests, sbuffers;
+  sc_array_t          rrequests, rbuffers;
+} p4est_ghostvirt_exchange_t;
+
+p4est_virtual_ghost_t *p4est_virtual_ghost_new (p4est_t * p4est,
+                                                p4est_ghost_t * ghost,
+                                                p4est_mesh_t * mesh,
+                                                p4est_virtual_t *
+                                                virtual_quads,
+                                                p4est_connect_type_t btype);
+
+void                p4est_virtual_ghost_destroy (p4est_virtual_ghost_t *
+                                                 virtual_ghost);
 
 /* -------------------------------------------------------------------------- */
 /* |                            Neighbor search                             | */
