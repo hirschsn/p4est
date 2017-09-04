@@ -37,7 +37,6 @@
 #error "Including a p4est header with P4_TO_P8 defined"
 #endif
 
-#include <p4est.h>
 #include <p4est_ghost.h>
 #include <p4est_mesh.h>
 

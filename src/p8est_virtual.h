@@ -33,7 +33,6 @@
 #ifndef P8EST_VIRTUAL_H
 #define P8EST_VIRTUAL_H
 
-#include <p8est.h>
 #include <p8est_ghost.h>
 #include <p8est_mesh.h>
 
@@ -156,7 +155,6 @@ size_t              p8est_virtual_memory_used (p8est_virtual_t * virtual);
 /* -------------------------------------------------------------------------- */
 /* |                            Neighbor search                             | */
 /* -------------------------------------------------------------------------- */
-
 /* *INDENT-OFF* */
 /** Store for each virtual subquad the index in Morton-order of the neighboring
  * virtual subquad in the direction of a face index. Note, that we are only
