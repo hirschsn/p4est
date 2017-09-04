@@ -108,7 +108,7 @@ has_virtuals_inner (p4est_virtual_t * virtual_quads, p4est_t * p4est,
     sc_array_truncate (quads);
 
     p4est_mesh_get_neighbors (p4est, ghost, mesh, qid, i, quads, NULL, NULL);
-    for (j = 0; j < quads->elem_count; ++j) {
+    for (j = 0; j < (int) quads->elem_count; ++j) {
       neighbor = *(p4est_quadrant_t **) sc_array_index (quads, j);
       if (level < neighbor->level) {
         has_virtuals = 1;
@@ -206,7 +206,7 @@ has_virtuals_parallel_boundary (p4est_virtual_t * virtual_quads,
     sc_array_truncate (qids);
 
     p4est_mesh_get_neighbors (p4est, ghost, mesh, qid, i, quads, NULL, qids);
-    for (j = 0; j < quads->elem_count; ++j) {
+    for (j = 0; j < (int) quads->elem_count; ++j) {
       neighbor = *(p4est_quadrant_t **) sc_array_index (quads, j);
       neighbor_qid = *(int *) sc_array_index (qids, j);
       if (level < neighbor->level) {

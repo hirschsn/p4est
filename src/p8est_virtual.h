@@ -137,8 +137,8 @@ p8est_virtual_t    *p8est_virtual_new (p8est_t * p4est, p8est_ghost_t * ghost,
                                        p8est_connect_type_t btype);
 
 /** Destroy a p8est_virtual structure.
- * \param [in] virtual   Virtual structure previously created by
- *                       p8est_virtual_new or p8est_virtual_new_ext.
+ * \param [in] virtual_quads   Virtual structure previously created by
+ *                             p8est_virtual_new or p8est_virtual_new_ext.
  */
 void                p8est_virtual_destroy (p8est_virtual_t * virtual_quads);
 
