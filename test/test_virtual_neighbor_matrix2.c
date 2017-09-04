@@ -108,6 +108,7 @@ check_edge_neighbor_matrix ()
   int                *count_occurances;
   int                 val, i, j, k;
   int                 must_be_internal;
+  int                 must_be_edge_query;
   int                 l_internal, u_internal;
   int                 l_face, u_face;
   int                 l_edge, u_edge;
@@ -127,18 +128,27 @@ check_edge_neighbor_matrix ()
     }
     for (j = 0; j < P8EST_EDGES; ++j) {
       must_be_internal = 0;
+      must_be_edge_query = 0;
       val = p8est_edge_virtual_neighbors_inside[i][j];
       for (k = 0; k < P4EST_DIM; ++k) {
         if (j == internal_edge_neighbors[k]) {
           must_be_internal = 1;
           break;
         }
+        if (j == p8est_corner_edges[i][k])  {
+          must_be_edge_query = 1;
+          break;
+        }
       }
+      P4EST_ASSERT (!(must_be_internal && must_be_edge_query));
       if (must_be_internal) {
         P4EST_ASSERT (0 <= val && val < P4EST_CHILDREN);
       }
+      else if (must_be_edge_query) {
+        P4EST_ASSERT (l_edge <= val && val < u_edge);
+      }
       else {
-        P4EST_ASSERT (P4EST_CHILDREN <= val && val < space_to_alloc);
+        P4EST_ASSERT (l_face <= val && val < u_face);
       }
       ++count_occurances[val];
     }
