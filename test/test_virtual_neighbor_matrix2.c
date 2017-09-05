@@ -188,7 +188,9 @@ check_corner_neighbor_matrix ()
   int                 l_internal, u_internal;
   int                 l_face, u_face;
 #ifdef P4_TO_P8
+  int                 k, l;
   int                 l_edge, u_edge;
+  int                 must_be_edge_query;
 #endif /* P4_TO_P8 */
   int                 l_corner, u_corner;
   int                 internal_corner_neighbor;
@@ -210,14 +212,58 @@ check_corner_neighbor_matrix ()
   count_occurances = P4EST_ALLOC_ZERO (int, space_to_alloc);
 
   for (i = 0; i < P4EST_CHILDREN; ++i) {
+    /* types of queries:
+     * a) internal:  an internal virtual quadrant needs to be queried for the
+     *               diagonally opposite corner of the corner the current
+     *               virtual quadrant is associated with.
+     * b) corner:    a corner neighbor needs to be queried for the corner that
+     *               the current virtual quadrant is associated with.
+     * c) edge (3D): an edge neighbor needs to be queried if the corner index is
+     *               among the three corner indices that are opposite across one
+     *               of the edges that are adjacent to the corner the current
+     *               virtual quadrant is associated with.
+     * d) face:      Anything else.
+     */
     internal_corner_neighbor = i ^ (P4EST_CHILDREN - 1);
     for (j = 0; j < P4EST_CHILDREN; ++j) {
+#ifdef P4_TO_P8
+      must_be_edge_query = -1;
+      for (k = 0; k < P4EST_DIM; ++k) {
+        if (must_be_edge_query == j) {
+          break;
+        }
+        for (l = 0; l < 2; ++l) {
+          must_be_edge_query = p8est_edge_corners[p8est_corner_edges[i][k]][l];
+          if (must_be_edge_query == i) {
+            must_be_edge_query = -1;
+            continue;
+          }
+          else {
+            break;
+          }
+        }
+      }
+      if (must_be_edge_query != j) {
+        must_be_edge_query = 0;
+      }
+      else {
+        must_be_edge_query = 1;
+      }
+#endif /* P4_TO_P8 */
       val = p4est_corner_virtual_neighbors_inside[i][j];
       if (j == internal_corner_neighbor) {
         P4EST_ASSERT (0 <= val && val < P4EST_CHILDREN);
       }
+#ifdef P4_TO_P8
+      else if (must_be_edge_query) {
+        P4EST_ASSERT (l_edge <= val && val < u_edge);
+      }
+#endif /* P4_TO_P8 */
+      else if (j == i) {
+        P4EST_ASSERT (l_corner <= val && val < u_corner);
+      }
       else {
-        P4EST_ASSERT (P4EST_CHILDREN <= val && val < space_to_alloc);
+        P4EST_ASSERT (l_face <= val && val < u_face);
       }
       ++count_occurances[val];
     }
