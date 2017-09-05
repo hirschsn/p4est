@@ -75,7 +75,7 @@ SC_EXTERN_C_BEGIN;
  * These arrays are NULL by default and can be enabled using \ref
  * p4est_virtual_new_ext.
  */
-typedef struct
+typedef struct p4est_virtual
 {
   p4est_locidx_t      local_num_quadrants;
   p4est_locidx_t      ghost_num_quadrants;
@@ -172,7 +172,7 @@ size_t              p4est_virtual_memory_used (p4est_virtual_t *
  * If either no virtual quadrants are embedded or no virtual quadrants are
  * expected 0 is stored, else 1.
  */
-typedef struct
+typedef struct p4est_virtual_ghost
 {
   p4est_connect_type_t btype;
   int8_t             *mirror_proc_virtuals;
