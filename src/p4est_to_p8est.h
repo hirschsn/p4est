@@ -118,6 +118,7 @@
 #define p4est_wrap_flags_t              p8est_wrap_flags_t
 #define p4est_vtk_context_t             p8est_vtk_context_t
 #define p4est_virtual_t                 p8est_virtual_t
+#define p4est_virtual_ghost_t           p8est_virtual_ghost_t
 
 /* redefine external variables */
 #define p4est_face_corners              p8est_face_corners
@@ -460,6 +461,9 @@
 #define p4est_virtual_new_ext           p8est_virtual_new_ext
 #define p4est_virtual_destroy           p8est_virtual_destroy
 #define p4est_virtual_memory_used       p8est_virtual_memory_used
+#define p4est_virtual_ghost_new         p8est_virtual_ghost_new
+#define p4est_virtual_ghost_destroy     p8est_virtual_ghost_destroy
+#define p4est_virtual_ghost_memory_used p8est_virtual_ghost_memory_used
 
 /* variables in p4est_virtual */
 #define p4est_face_virtual_neighbors_inside \

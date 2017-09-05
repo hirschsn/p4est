@@ -42,6 +42,9 @@
 
 SC_EXTERN_C_BEGIN;
 
+/* -------------------------------------------------------------------------- */
+/* |                           Virtual quadrants                            | */
+/* -------------------------------------------------------------------------- */
 /** Struct for storing virtual quadrants at refinement boundaries in coarse
  * quadrants for algorithms that rely on interaction to only take place between
  * same-sized quadrants.
@@ -160,9 +163,19 @@ size_t              p4est_virtual_memory_used (p4est_virtual_t *
 /* -------------------------------------------------------------------------- */
 /* |                             Ghost exchange                             | */
 /* -------------------------------------------------------------------------- */
+
+/** Store all required information for exchanging ghost data including that of
+ * virtual quadrants.  The maximum codimension which we consider is stored in
+ * btype.
+ * mirror_proc_virtuals is structured and accessed in the same way as
+ * mirror_proc_mirrors in p8est_ghost_t.
+ * If either no virtual quadrants are embedded or no virtual quadrants are
+ * expected 0 is stored, else 1.
+ */
 typedef struct
 {
-
+  p4est_connect_type_t btype;
+  int8_t             *mirror_proc_virtuals;
 } p4est_virtual_ghost_t;
 
 /** Transient storage for asynchronous ghost exchange. */
@@ -179,6 +192,16 @@ typedef struct p4est_ghostvirt_exchange
   sc_array_t          rrequests, rbuffers;
 } p4est_ghostvirt_exchange_t;
 
+/** Extend p8est_ghost such that payload can be exchanged including virtual
+ * quadrants.
+ * \param[in]      p4est
+ * \param[in]      ghost
+ * \param[in]      mesh
+ *                 CAUTION: mirror_qid array needs to be populated.
+ * \param[in]      virtual_quads
+ * \param[in]      btype
+ * \return
+ */
 p4est_virtual_ghost_t *p4est_virtual_ghost_new (p4est_t * p4est,
                                                 p4est_ghost_t * ghost,
                                                 p4est_mesh_t * mesh,
@@ -188,6 +211,15 @@ p4est_virtual_ghost_t *p4est_virtual_ghost_new (p4est_t * p4est,
 
 void                p4est_virtual_ghost_destroy (p4est_virtual_ghost_t *
                                                  virtual_ghost);
+
+/** Return memory size in bytes that is occupied from p8est_ghost_virtual_t
+ * struct.
+ * CAUTION: Does not work yet.
+ * \param[in] virtual_ghost   Virtual ghost structure.
+ * \return                    Memory used in bytes.
+ */
+size_t              p4est_virtual_ghost_memory_used (p4est_virtual_ghost_t *
+                                                     virtual_ghost);
 
 /* -------------------------------------------------------------------------- */
 /* |                            Neighbor search                             | */

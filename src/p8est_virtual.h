@@ -38,6 +38,9 @@
 
 SC_EXTERN_C_BEGIN;
 
+/* -------------------------------------------------------------------------- */
+/* |                           Virtual quadrants                            | */
+/* -------------------------------------------------------------------------- */
 /** Struct for storing virtual quadrants at refinement boundaries in coarse
  * quadrants for algorithms that rely on interaction to only take place between
  * same-sized quadrants.
@@ -143,8 +146,8 @@ p8est_virtual_t    *p8est_virtual_new (p8est_t * p4est, p8est_ghost_t * ghost,
 void                p8est_virtual_destroy (p8est_virtual_t * virtual_quads);
 
 /** Calculate the memory usage of the virtual structure.
- * \param[in] virtual   Virtual structure
- * \return              Memory used in bytes.
+ * \param[in] virtual_quads   Virtual structure
+ * \return                    Memory used in bytes.
  */
 size_t              p8est_virtual_memory_used (p8est_virtual_t *
                                                virtual_quads);
@@ -152,6 +155,64 @@ size_t              p8est_virtual_memory_used (p8est_virtual_t *
 /* -------------------------------------------------------------------------- */
 /* |                             Ghost exchange                             | */
 /* -------------------------------------------------------------------------- */
+
+/** Store all required information for exchanging ghost data including that of
+ * virtual quadrants.  The maximum codimension which we consider is stored in
+ * btype.
+ * mirror_proc_virtuals is structured and accessed in the same way as
+ * mirror_proc_mirrors in p8est_ghost_t.
+ * If either no virtual quadrants are embedded or no virtual quadrants are
+ * expected 0 is stored, else 1.
+ */
+typedef struct
+{
+  p8est_connect_type_t btype;
+  int8_t             *mirror_proc_virtuals;
+} p8est_virtual_ghost_t;
+
+/** Transient storage for asynchronous ghost exchange. */
+typedef struct p8est_ghostvirt_exchange
+{
+  int                 is_levels;
+  p8est_t            *p4est;
+  p8est_ghost_t      *ghost;
+  p8est_virtual_t    *virtual_quads;
+  p8est_virtual_ghost_t *virtual_ghost;
+  int                 minlevel, maxlevel;
+  size_t              data_size;
+  void              **ghost_data;
+  int                *qactive, *qbuffer;
+  sc_array_t          requests, sbuffers;
+  sc_array_t          rrequests, rbuffers;
+} p8est_ghostvirt_exchange_t;
+
+/** Extend p8est_ghost such that payload can be exchanged including virtual
+ * quadrants.
+ * \param[in]      p4est
+ * \param[in]      ghost
+ * \param[in]      mesh
+ * \param[in]      virtual_quads
+ * \param[in]      btype
+ * \return
+ */
+p8est_virtual_ghost_t *p8est_virtual_ghost_new (p8est_t * p4est,
+                                                p8est_ghost_t * ghost,
+                                                p8est_mesh_t * mesh,
+                                                p8est_virtual_t *
+                                                virtual_quads,
+                                                p8est_connect_type_t btype);
+
+void                p8est_virtual_ghost_destroy (p8est_virtual_ghost_t *
+                                                 virtual_ghost);
+
+/** Return memory size in bytes that is occupied from p8est_ghost_virtual_t
+ * struct.
+ * CAUTION: Does not work yet.
+ * \param[in] virtual_ghost   Virtual ghost structure.
+ * \return                    Memory used in bytes.
+ */
+size_t              p8est_virtual_ghost_memory_used (p8est_virtual_ghost_t *
+                                                     virtual_ghost);
 
 /* -------------------------------------------------------------------------- */
 /* |                            Neighbor search                             | */

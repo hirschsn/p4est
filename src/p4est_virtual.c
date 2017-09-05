@@ -416,3 +416,106 @@ p4est_virtual_memory_used (p4est_virtual_t * virtual_quads)
 
   return all_mem;
 }
+
+/* -------------------------------------------------------------------------- */
+/* |                             Ghost exchange                             | */
+/* -------------------------------------------------------------------------- */
+p4est_virtual_ghost_t *
+p4est_virtual_ghost_new (p4est_t * p4est, p4est_ghost_t * ghost,
+                         p4est_mesh_t * mesh, p4est_virtual_t * virtual_quads,
+                         p4est_connect_type_t btype)
+{
+  int                 proc;
+  p4est_locidx_t      lq, gq;
+  p4est_locidx_t      offset_begin, offset_end;
+  p4est_locidx_t      mirror_idx, mirror_qid;
+  p4est_locidx_t      neighbor_qid, neighbor_enc;
+  int                 n, neighbor_idx, max_neighbor_idx;
+  sc_array_t         *nqid, *nenc;
+  p4est_virtual_ghost_t *virtual_ghost;
+
+  lq = mesh->local_num_quadrants;
+  gq = mesh->ghost_num_quadrants;
+  nqid = sc_array_new (sizeof (p4est_locidx_t));
+  nenc = sc_array_new (sizeof (p4est_locidx_t));
+
+  virtual_ghost = P4EST_ALLOC_ZERO (p4est_virtual_ghost_t, 1);
+  P4EST_ASSERT (btype <= virtual_quads->btype);
+  virtual_ghost->btype = btype;
+  virtual_ghost->mirror_proc_virtuals =
+    P4EST_ALLOC_ZERO (int8_t, ghost->mirror_proc_offsets[p4est->mpisize]);
+
+  switch (btype) {
+  case P4EST_CONNECT_FACE:
+    max_neighbor_idx = P4EST_FACES;
+    break;
+#ifdef P4_TO_P8
+  case P8EST_CONNECT_EDGE:
+    max_neighbor_idx = P4EST_FACES + P8EST_EDGES;
+    break;
+#endif /* P4_TO_P8 */
+  case P4EST_CONNECT_FULL:
+      /* *INDENT-OFF* */
+      max_neighbor_idx = P4EST_FACES +
+#ifdef P4_TO_P8
+                         P8EST_EDGES +
+#endif /* P4_TO_P8 */
+                         P4EST_CHILDREN;
+      /* *INDENT-ON* */
+    break;
+  default:
+    SC_ABORT_NOT_REACHED ();
+  }
+
+  /* populate mirror_proc_virtuals:
+   * Iterate ghost->mirror_proc_mirrors for each process.  Consider for each
+   * mirror index hosting virtual quadrants if its ghost neighbors on the
+   * respective neighbor rank are half-sized w.r.t. that mirror.  In this case
+   * the neighboring process places virtual quads which we have to send.
+   */
+  for (proc = 0; proc < p4est->mpisize; ++proc) {
+    offset_begin = ghost->mirror_proc_offsets[proc];
+    offset_end = ghost->mirror_proc_offsets[proc + 1];
+    for (mirror_idx = offset_begin; mirror_idx < offset_end; ++mirror_idx) {
+      mirror_qid = mesh->mirror_qid[mirror_idx];
+      if (virtual_quads->virtual_qflags[mirror_qid]) {
+        for (neighbor_idx = 0; neighbor_idx < max_neighbor_idx;
+             ++neighbor_idx) {
+          sc_array_truncate (nqid);
+          sc_array_truncate (nenc);
+          p4est_mesh_get_neighbors (p4est, ghost, mesh, mirror_qid,
+                                    neighbor_idx, NULL, nenc, nqid);
+          for (n = 0; n < nqid->elem_count; ++n) {
+            neighbor_qid = *(p4est_locidx_t *) sc_array_index(nqid, n);
+            if (lq <= neighbor_qid && neighbor_qid < (lq + gq)) {
+              neighbor_qid -= lq;
+              if (mesh->ghost_to_proc[neighbor_qid] == proc) {
+                neighbor_enc = *(p4est_locidx_t *) sc_array_index (nenc, n);
+                if (neighbor_enc < 0) {
+                  virtual_ghost->mirror_proc_virtuals[mirror_idx] = 1;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  sc_array_destroy (nqid);
+  sc_array_destroy (nenc);
+  return virtual_ghost;
+}
+
+void
+p4est_virtual_ghost_destroy (p4est_virtual_ghost_t * virtual_ghost)
+{
+  P4EST_FREE (virtual_ghost->mirror_proc_virtuals);
+  P4EST_FREE (virtual_ghost);
+}
+
+size_t
+p4est_virtual_ghost_memory_used (p4est_virtual_ghost_t * virtual_ghost)
+{
+  return 0;
+}
