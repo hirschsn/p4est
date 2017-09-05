@@ -135,7 +135,7 @@ check_edge_neighbor_matrix ()
           must_be_internal = 1;
           break;
         }
-        if (j == p8est_corner_edges[i][k])  {
+        if (j == p8est_corner_edges[i][k]) {
           must_be_edge_query = 1;
           break;
         }
@@ -233,7 +233,8 @@ check_corner_neighbor_matrix ()
           break;
         }
         for (l = 0; l < 2; ++l) {
-          must_be_edge_query = p8est_edge_corners[p8est_corner_edges[i][k]][l];
+          must_be_edge_query =
+            p8est_edge_corners[p8est_corner_edges[i][k]][l];
           if (must_be_edge_query == i) {
             must_be_edge_query = -1;
             continue;
