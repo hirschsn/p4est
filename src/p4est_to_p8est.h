@@ -119,6 +119,7 @@
 #define p4est_vtk_context_t             p8est_vtk_context_t
 #define p4est_virtual_t                 p8est_virtual_t
 #define p4est_virtual_ghost_t           p8est_virtual_ghost_t
+#define p4est_virtual_ghost_exchange_t  p8est_virtual_ghost_exchange_t
 
 /* redefine external variables */
 #define p4est_face_corners              p8est_face_corners

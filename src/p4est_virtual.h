@@ -179,10 +179,12 @@ typedef struct p4est_virtual_ghost
 } p4est_virtual_ghost_t;
 
 /** Transient storage for asynchronous ghost exchange. */
-typedef struct p4est_ghostvirt_exchange
+typedef struct p4est_virtual_ghost_exchange
 {
   int                 is_levels;
   p4est_t            *p4est;
+  p4est_ghost_t      *ghost;
+  p4est_virtual_t    *virtual_quads;
   p4est_virtual_ghost_t *virtual_ghost;
   int                 minlevel, maxlevel;
   size_t              data_size;
@@ -190,7 +192,7 @@ typedef struct p4est_ghostvirt_exchange
   int                *qactive, *qbuffer;
   sc_array_t          requests, sbuffers;
   sc_array_t          rrequests, rbuffers;
-} p4est_ghostvirt_exchange_t;
+} p4est_virtual_ghost_exchange_t;
 
 /** Extend p8est_ghost such that payload can be exchanged including virtual
  * quadrants.

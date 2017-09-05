@@ -171,7 +171,7 @@ typedef struct p8est_virtual_ghost
 } p8est_virtual_ghost_t;
 
 /** Transient storage for asynchronous ghost exchange. */
-typedef struct p8est_ghostvirt_exchange
+typedef struct p8est_virtual_ghost_exchange
 {
   int                 is_levels;
   p8est_t            *p4est;
@@ -184,7 +184,7 @@ typedef struct p8est_ghostvirt_exchange
   int                *qactive, *qbuffer;
   sc_array_t          requests, sbuffers;
   sc_array_t          rrequests, rbuffers;
-} p8est_ghostvirt_exchange_t;
+} p8est_virtual_ghost_exchange_t;
 
 /** Extend p8est_ghost such that payload can be exchanged including virtual
  * quadrants.
