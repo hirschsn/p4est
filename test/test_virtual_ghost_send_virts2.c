@@ -39,7 +39,7 @@
 int
 check_virtual_ghost (sc_MPI_Comm mpicomm)
 {
-  int8_t             *received_mirror_flags;
+  p4est_locidx_t     *received_mirror_flags;
   p4est_connect_type_t btype = P4EST_CONNECT_FULL;
   p4est_t            *p4est;
   p4est_connectivity_t *conn;
@@ -48,11 +48,24 @@ check_virtual_ghost (sc_MPI_Comm mpicomm)
   p4est_virtual_t    *virtual_quads;
   p4est_virtual_ghost_t *virtual_ghost;
   int                 min_level = 3;
+  sc_MPI_Request     *r;
+  int                 i, ng, n_proc, mpiret;
+  int                 offset_old, offset_new;
+  sc_array_t         *requests;
 
   /* setup p4est */
+#if 0
   conn = p4est_connectivity_new_periodic ();
+#endif /* 0 */
+#ifdef P4_TO_P8
+  conn = p8est_connectivity_new_unitcube ();
+#else /* P4_TO_P8 */
+  conn = p4est_connectivity_new_unitsquare ();
+#endif /* P4_TO_P8 */
   p4est = p4est_new_ext (mpicomm, conn, 0, min_level, 0, 0, NULL, NULL);
   p4est_balance (p4est, btype, NULL);
+
+  n_proc = p4est->mpisize;
 
   /* setup anything else */
   ghost = p4est_ghost_new (p4est, btype);
@@ -60,8 +73,72 @@ check_virtual_ghost (sc_MPI_Comm mpicomm)
   virtual_quads = p4est_virtual_new (p4est, ghost, mesh, btype);
   virtual_ghost =
     p4est_virtual_ghost_new (p4est, ghost, mesh, virtual_quads, btype);
+
+  /** Exchange information if ghost quadrants contain virtual quadrants on
+   * local processor. */
   received_mirror_flags =
-    P4EST_ALLOC (int8_t, ghost->mirror_proc_offsets[p4est->mpisize]);
+    P4EST_ALLOC (p4est_locidx_t, ghost->mirror_proc_offsets[n_proc]);
+  requests = sc_array_new (sizeof (sc_MPI_Request));
+
+  /** receive virtual_gflags from neighboring processes */
+  offset_old = 0;
+  for (i = 0; i < n_proc; ++i) {
+    offset_new = ghost->mirror_proc_offsets[i + 1];
+    ng = offset_new - offset_old;
+    P4EST_ASSERT (0 <= ng);
+    if (0 < ng) {
+      r = (sc_MPI_Request *) sc_array_push (requests);
+      mpiret = sc_MPI_Irecv ((void *) (received_mirror_flags + offset_old),
+                             ng * sizeof (p4est_locidx_t), sc_MPI_BYTE, i,
+                             P4EST_COMM_GHOST_EXCHANGE, p4est->mpicomm, r);
+      SC_CHECK_MPI (mpiret);
+      offset_old = offset_new;
+    }
+  }
+
+  /** send virtual_gflags to neighboring processes:
+   * Iterate over mpisize and check proc_offsets. If the current offset differs
+   * from the offset before this is a processor from which we will receive
+   * messages. Send to that processor if the current process expects virtual
+   * quadrants during ghost exchange.
+   */
+  offset_old = 0;
+  for (i = 0; i < n_proc; ++i) {
+    offset_new = ghost->proc_offsets[i + 1];
+    ng = offset_new - offset_old;
+    P4EST_ASSERT (0 <= ng);
+    if (0 < ng) {
+      r = (sc_MPI_Request *) sc_array_push (requests);
+      mpiret =
+        sc_MPI_Isend ((void *) (virtual_quads->virtual_gflags + offset_old),
+                      ng * sizeof (p4est_locidx_t), sc_MPI_BYTE, i,
+                      P4EST_COMM_GHOST_EXCHANGE, p4est->mpicomm, r);
+      SC_CHECK_MPI (mpiret);
+      offset_old = offset_new;
+    }
+  }
+
+  /** Wait for communication to finish */
+  mpiret =
+    sc_MPI_Waitall (requests->elem_count, (sc_MPI_Request *) requests->array,
+                    sc_MPI_STATUSES_IGNORE);
+  SC_CHECK_MPI (mpiret);
+  sc_array_destroy (requests);
+
+  /* compare obtained array with the locally taken decision */
+  for (i = 0; i < ghost->mirror_proc_offsets[n_proc]; ++i) {
+    if (received_mirror_flags[i] == -1) {
+      P4EST_ASSERT (virtual_ghost->mirror_proc_virtuals[i] == 0);
+    }
+    else {
+      /* include a small test for virtual_gflags. At most all ghosts can embed
+       * virtual quadrants, such that we have an upper bound here */
+      P4EST_ASSERT ((virtual_ghost->mirror_proc_virtuals[i] == 1) &&
+                    (0 <= received_mirror_flags[i]
+                     && received_mirror_flags[i] <
+                     ghost->ghosts.elem_count));
+    }
+  }
 
   /* cleanup */
   P4EST_FREE (received_mirror_flags);
@@ -71,6 +148,7 @@ check_virtual_ghost (sc_MPI_Comm mpicomm)
   p4est_ghost_destroy (ghost);
   p4est_destroy (p4est);
   p4est_connectivity_destroy (conn);
+
   return 0;
 }
 
@@ -103,3 +181,4 @@ main (int argc, char **argv)
 
   return 0;
 }
+
