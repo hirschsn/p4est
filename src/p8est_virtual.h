@@ -188,12 +188,16 @@ typedef struct p8est_virtual_ghost_exchange
 
 /** Extend p8est_ghost such that payload can be exchanged including virtual
  * quadrants.
- * \param[in]      p4est
- * \param[in]      ghost
- * \param[in]      mesh
- * \param[in]      virtual_quads
- * \param[in]      btype
- * \return
+ * \param[in]      p4est            The forest, must be 2:1 balanced.
+ * \param[in]      ghost            The forest's ghost layer.
+ * \param[in]      mesh             Lookup tables encoding neighbor information.
+ *                 CAUTION: mirror_qid array needs to be populated.
+ * \param[in]      virtual_quads    Which quadrants host virtual quadrants, both
+ *                                  local and ghost quadrants.
+ * \param[in]      btype            The maximum co-dimension of neighbors that
+ *                                  will be considered.
+ * \return                          Struct containing all necessary information
+ *                                  for exchanging data including virtual quads.
  */
 p8est_virtual_ghost_t *p8est_virtual_ghost_new (p8est_t * p4est,
                                                 p8est_ghost_t * ghost,
@@ -202,6 +206,10 @@ p8est_virtual_ghost_t *p8est_virtual_ghost_new (p8est_t * p4est,
                                                 virtual_quads,
                                                 p8est_connect_type_t btype);
 
+/** Free a virtual_ghost struct previously allocated using
+ * \ref p4est_virtual_ghost_new.
+ * \param[in]     virtual_ghost    The struct to be freed.
+ */
 void                p8est_virtual_ghost_destroy (p8est_virtual_ghost_t *
                                                  virtual_ghost);
 
