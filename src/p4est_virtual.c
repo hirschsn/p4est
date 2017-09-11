@@ -34,15 +34,15 @@
 #ifndef P4_TO_P8
 
 /* *INDENT-OFF* */
-const int           p4est_face_virtual_neighbors_inside[P4EST_CHILDREN]
-                                                       [P4EST_FACES] =
+const int           p4est_virtual_face_neighbors_search_opts[P4EST_CHILDREN]
+                                                            [P4EST_FACES] =
 {{  4,  1,  6,  2 },
  {  0,  5, 10,  3 },
  {  8,  3,  0,  7 },
  {  2,  9,  1, 11 }};
 
-const int           p4est_corner_virtual_neighbors_inside[P4EST_CHILDREN]
-                                                         [P4EST_CHILDREN] =
+const int           p4est_virtual_corner_neighbors_search_opts[P4EST_CHILDREN]
+                                                              [P4EST_CHILDREN] =
 {{ 12, 10,  8,  3 },
  {  6, 13,  2,  9 },
  {  4,  1, 14, 11 },

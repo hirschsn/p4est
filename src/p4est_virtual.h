@@ -247,8 +247,8 @@ size_t              p4est_virtual_ghost_memory_used (p4est_virtual_ghost_t *
  * find the adjacent index in the opposite tree in and f the index of the local
  * face we have to query.
  */
-extern const int    p4est_face_virtual_neighbors_inside[P4EST_CHILDREN]
-                                                       [P4EST_FACES];
+extern const int    p4est_virtual_face_neighbors_search_opts[P4EST_CHILDREN]
+                                                            [P4EST_FACES];
 
 /** Store for each virtual subquad the index in Morton-order of the neighboring
  * virtual subquad in the direction of a corner index. Note, that we are only
@@ -269,8 +269,8 @@ extern const int    p4est_face_virtual_neighbors_inside[P4EST_CHILDREN]
  *   s = 12 + c
  * where c is the respective corner index.
  */
-extern const int    p4est_corner_virtual_neighbors_inside[P4EST_CHILDREN]
-                                                         [P4EST_CHILDREN];
+extern const int    p4est_virtual_corner_neighbors_search_opts[P4EST_CHILDREN]
+                                                              [P4EST_CHILDREN];
 /* *INDENT-ON* */
 
 SC_EXTERN_C_END;

@@ -68,7 +68,7 @@ check_face_neighbor_matrix ()
           break;
         }
       }
-      val = p4est_face_virtual_neighbors_inside[i][j];
+      val = p4est_virtual_face_neighbors_search_opts[i][j];
       if (must_be_internal) {
         P4EST_ASSERT (0 <= val && val < P4EST_CHILDREN);
       }
@@ -129,7 +129,7 @@ check_edge_neighbor_matrix ()
     for (j = 0; j < P8EST_EDGES; ++j) {
       must_be_internal = 0;
       must_be_edge_query = 0;
-      val = p8est_edge_virtual_neighbors_inside[i][j];
+      val = p8est_virtual_edge_neighbors_search_opts[i][j];
       for (k = 0; k < P4EST_DIM; ++k) {
         if (j == internal_edge_neighbors[k]) {
           must_be_internal = 1;
@@ -251,7 +251,7 @@ check_corner_neighbor_matrix ()
         must_be_edge_query = 1;
       }
 #endif /* P4_TO_P8 */
-      val = p4est_corner_virtual_neighbors_inside[i][j];
+      val = p4est_virtual_corner_neighbors_search_opts[i][j];
       if (j == internal_corner_neighbor) {
         P4EST_ASSERT (0 <= val && val < P4EST_CHILDREN);
       }

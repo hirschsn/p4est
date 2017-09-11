@@ -467,9 +467,9 @@
 #define p4est_virtual_ghost_memory_used p8est_virtual_ghost_memory_used
 
 /* variables in p4est_virtual */
-#define p4est_face_virtual_neighbors_inside \
-        p8est_face_virtual_neighbors_inside
-#define p4est_corner_virtual_neighbors_inside \
-        p8est_corner_virtual_neighbors_inside
+#define p4est_virtual_face_neighbors_search_opts \
+        p8est_virtual_face_neighbors_search_opts
+#define p4est_virtual_corner_neighbors_search_opts \
+        p8est_virtual_corner_neighbors_search_opts
 
 #endif /* !P4EST_TO_P8EST_H */

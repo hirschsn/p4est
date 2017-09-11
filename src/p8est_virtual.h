@@ -238,8 +238,8 @@ size_t              p8est_virtual_ghost_memory_used (p8est_virtual_ghost_t *
  * find the adjacent index in the opposite tree in and f the index of the local
  * face we have to query.
  */
-extern const int    p8est_face_virtual_neighbors_inside[P8EST_CHILDREN]
-                                                       [P8EST_FACES];
+extern const int    p8est_virtual_face_neighbors_search_opts[P8EST_CHILDREN]
+                                                            [P8EST_FACES];
 
 /** Store for each virtual subquad the index in Morton-order of the neighboring
  * virtual subquad in the direction of an edge index. Note, that we are only
@@ -262,8 +262,8 @@ extern const int    p8est_face_virtual_neighbors_inside[P8EST_CHILDREN]
  * find the adjacent index in the opposite tree in and e the index of the local
  * edge we have to query.
  */
-extern const int    p8est_edge_virtual_neighbors_inside[P8EST_CHILDREN]
-                                                       [P8EST_EDGES];
+extern const int    p8est_virtual_edge_neighbors_search_opts[P8EST_CHILDREN]
+                                                            [P8EST_EDGES];
 
 /** Store for each virtual subquad the index in Morton-order of the neighboring
  * virtual subquad in the direction of a corner index. Note, that we are only
@@ -289,8 +289,8 @@ extern const int    p8est_edge_virtual_neighbors_inside[P8EST_CHILDREN]
  *   s = 56 + c
  * where c is the respective corner index.
  */
-extern const int    p8est_corner_virtual_neighbors_inside[P8EST_CHILDREN]
-                                                         [P8EST_CHILDREN];
+extern const int    p8est_virtual_corner_neighbors_search_opts[P8EST_CHILDREN]
+                                                              [P8EST_CHILDREN];
 /* *INDENT-ON* */
 
 SC_EXTERN_C_END;

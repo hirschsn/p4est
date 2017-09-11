@@ -27,8 +27,8 @@
 #include <p8est_connectivity.h>
 
 /* *INDENT-OFF* */
-const int           p8est_face_virtual_neighbors_inside[P8EST_CHILDREN]
-                                                       [P8EST_FACES] =
+const int           p8est_virtual_face_neighbors_search_opts[P8EST_CHILDREN]
+                                                            [P8EST_FACES] =
 {{  8,  1, 10,  2, 12,  4 },
  {  0,  9, 16,  3, 18,  5 },
  { 14,  3,  0, 11, 24,  6 },
@@ -38,8 +38,8 @@ const int           p8est_face_virtual_neighbors_inside[P8EST_CHILDREN]
  { 26,  7,  4, 23,  2, 25 },
  {  6, 27,  5, 29,  3, 31 }};
 
-const int           p8est_edge_virtual_neighbors_inside[P8EST_CHILDREN]
-                                                       [P8EST_EDGES] =
+const int           p8est_virtual_edge_neighbors_search_opts[P8EST_CHILDREN]
+                                                            [P8EST_EDGES] =
 {{ 32, 24, 22,  6, 36, 18, 20,  5, 40, 16, 14,  3 },
  { 44, 30, 28,  7, 12, 37,  4, 21, 10, 41,  2, 15 },
  { 12, 33,  4, 23, 48, 30, 26,  7,  8,  1, 42, 17 },
@@ -49,8 +49,8 @@ const int           p8est_edge_virtual_neighbors_inside[P8EST_CHILDREN]
  {  0, 11, 13, 35, 14,  3, 50, 31, 20,  5, 54, 29 },
  {  1, 17, 19, 47,  2, 15, 25, 51,  4, 21, 23, 55 }};
 
-const int           p8est_corner_virtual_neighbors_inside[P8EST_CHILDREN]
-                                                         [P8EST_CHILDREN] =
+const int           p8est_virtual_corner_neighbors_search_opts[P8EST_CHILDREN]
+                                                              [P8EST_CHILDREN] =
 {{ 56, 44, 48, 30, 52, 28, 26,  7 },
  { 32, 57, 24, 49, 22, 53,  6, 27 },
  { 36, 18, 58, 45, 20,  5, 54, 29 },
