@@ -79,6 +79,9 @@ typedef struct p4est_virtual
 {
   p4est_locidx_t      local_num_quadrants;
   p4est_locidx_t      ghost_num_quadrants;
+  p4est_locidx_t      local_num_virtuals;
+  p4est_locidx_t      ghost_num_virtuals;
+
   p4est_connect_type_t btype;           /**< which neighbors are considered in
                                              virtual */
 
@@ -229,6 +232,51 @@ void                p4est_virtual_ghost_destroy (p4est_virtual_ghost_t *
  */
 size_t              p4est_virtual_ghost_memory_used (p4est_virtual_ghost_t *
                                                      virtual_ghost);
+
+/* *INDENT-OFF* */
+/** Convenience function for exchanging contiguous data including that of
+ * virtual quadrants.  Using this function prevents overlapping computation and
+ * communication.
+ * \param[in] p4est
+ * \param[in] ghost
+ * \param[in] mesh
+ * \param[in] virtual_quads
+ * \param[in] virtual_ghost
+ * \param[in] data_size
+ * \param[in] mirror_data
+ * \param[in] ghost_data
+ */
+void                p4est_virtual_ghost_exchange_data
+  (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
+   p4est_virtual_t * virtual_quads, p4est_virtual_ghost_t * virtual_ghost,
+   size_t data_size, void *mirror_data, void *ghost_data);
+
+/** Initiate message transfer by posting asynchronous sends and receive
+ * operations.
+ * \param[in] p4est
+ * \param[in] ghost
+ * \param[in] mesh
+ * \param[in] virtual_quads
+ * \param[in] virtual_ghost
+ * \param[in] data_size
+ * \param[in] mirror_data
+ * \param[in] ghost_data
+ * \return                    Transient storage
+ */
+p4est_virtual_ghost_exchange_t
+  * p4est_virtual_ghost_exchange_data_begin
+  (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
+   p4est_virtual_t * virtual_quads, p4est_virtual_ghost_t * virtual_ghost,
+   size_t data_size, void *mirror_data, void *ghost_data);
+
+/** Finish message transfer and clean up transient storage
+ * \param[in] exc      Transient storage of data transfer.  Will be freed during
+ *                     execution.
+ */
+void               p4est_virtual_ghost_exchange_data_end
+  (p4est_virtual_ghost_exchange_t * exc);
+
+/* *INDENT-ON* */
 
 /* -------------------------------------------------------------------------- */
 /* |                            Neighbor search                             | */

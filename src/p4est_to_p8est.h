@@ -465,6 +465,11 @@
 #define p4est_virtual_ghost_new         p8est_virtual_ghost_new
 #define p4est_virtual_ghost_destroy     p8est_virtual_ghost_destroy
 #define p4est_virtual_ghost_memory_used p8est_virtual_ghost_memory_used
+#define p4est_virtual_ghost_exchange_data p8est_virtual_ghost_exchange_data
+#define p4est_virtual_ghost_exchange_data_begin       \
+        p8est_virtual_ghost_exchange_data_begin
+#define p4est_virtual_ghost_exchange_data_end         \
+        p8est_virtual_ghost_exchange_data_end
 
 /* variables in p4est_virtual */
 #define p4est_virtual_face_neighbors_search_opts \

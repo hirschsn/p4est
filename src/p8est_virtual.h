@@ -75,6 +75,9 @@ typedef struct p8est_virtual
 {
   p4est_locidx_t      local_num_quadrants;
   p4est_locidx_t      ghost_num_quadrants;
+  p4est_locidx_t      local_num_virtuals;
+  p4est_locidx_t      ghost_num_virtuals;
+
   p8est_connect_type_t btype;           /**< which neighbors are considered in
                                              virtual */
 
