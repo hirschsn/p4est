@@ -470,6 +470,12 @@
         p8est_virtual_ghost_exchange_data_begin
 #define p4est_virtual_ghost_exchange_data_end         \
         p8est_virtual_ghost_exchange_data_end
+#define p4est_virtual_ghost_exchange_data_level       \
+        p8est_virtual_ghost_exchange_data_level
+#define p4est_virtual_ghost_exchange_data_level_begin \
+        p8est_virtual_ghost_exchange_data_level_begin
+#define p4est_virtual_ghost_exchange_data_level_end   \
+        p8est_virtual_ghost_exchange_data_level_end
 
 /* variables in p4est_virtual */
 #define p4est_virtual_face_neighbors_search_opts \

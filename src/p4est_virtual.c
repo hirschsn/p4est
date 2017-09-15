@@ -554,7 +554,7 @@ p4est_virtual_ghost_exchange_data_begin (p4est_t * p4est,
   int                 mpiret;
   int                 g, q;
   char               *mem, **sbuf;
-  p4est_locidx_t      ng_excl, ng_incl, ng, theg, virt_offset;
+  p4est_locidx_t      ng_excl, ng_incl, ng, virt_offset;
   p4est_locidx_t      mirr;
   p4est_locidx_t     *mirr_offset;
   sc_MPI_Request     *r;
@@ -688,6 +688,243 @@ p4est_virtual_ghost_exchange_data_end (p4est_virtual_ghost_exchange_t * exc)
   }
   sc_array_reset (&exc->sbuffers);
   P4EST_FREE (exc);
+
   return;
 }
 
+void
+p4est_virtual_ghost_exchange_data_level (p4est_t * p4est,
+                                         p4est_ghost_t * ghost,
+                                         p4est_mesh_t * mesh,
+                                         p4est_virtual_t * virtual_quads,
+                                         p4est_virtual_ghost_t *
+                                         virtual_ghost, int level,
+                                         size_t data_size, void **mirror_data,
+                                         void **ghost_data)
+{
+  p4est_virtual_ghost_exchange_data_level_end
+    (p4est_virtual_ghost_exchange_data_level_begin
+     (p4est, ghost, mesh, virtual_quads, virtual_ghost, level, data_size,
+      mirror_data, ghost_data));
+}
+
+p4est_virtual_ghost_exchange_t *
+p4est_virtual_ghost_exchange_data_level_begin (p4est_t * p4est,
+                                               p4est_ghost_t * ghost,
+                                               p4est_mesh_t * mesh,
+                                               p4est_virtual_t *
+                                               virtual_quads,
+                                               p4est_virtual_ghost_t *
+                                               virtual_ghost, int level,
+                                               size_t data_size,
+                                               void **mirror_data,
+                                               void **ghost_data)
+{
+  const int           num_procs = p4est->mpisize;
+  int                 mpiret;
+  int                 q;
+  char               *mem, **sbuf;
+  p4est_locidx_t      ng_excl, ng_incl, ng, theg;
+  p4est_locidx_t      offset, first_real, first_virt;
+  p4est_locidx_t      lmatches;
+  p4est_locidx_t      ghst, mirror_idx, mirror_qid;
+  p4est_quadrant_t   *m;
+  sc_MPI_Request     *r;
+  p4est_virtual_ghost_exchange_t *exc;
+
+  P4EST_ASSERT (mesh->ghost_level != NULL);
+  P4EST_ASSERT (mesh->quad_level != NULL);
+  P4EST_ASSERT (virtual_quads->quad_qreal_offset != NULL);
+  P4EST_ASSERT (virtual_quads->quad_qvirtual_offset != NULL);
+  P4EST_ASSERT (virtual_quads->quad_greal_offset != NULL);
+  P4EST_ASSERT (virtual_quads->quad_gvirtual_offset != NULL);
+
+  /* initialize transient storage */
+  exc = P4EST_ALLOC_ZERO (p4est_virtual_ghost_exchange_t, 1);
+  exc->p4est = p4est;
+  exc->ghost = ghost;
+  exc->virtual_quads = virtual_quads;
+  exc->virtual_ghost = virtual_ghost;
+  exc->minlevel = level;
+  exc->maxlevel = level;
+  exc->is_levels = 1;
+  exc->data_size = data_size;
+  exc->ghost_data = ghost_data;
+  sc_array_init (&exc->requests, sizeof (sc_MPI_Request));
+  sc_array_init (&exc->sbuffers, sizeof (char *));
+
+  P4EST_ASSERT (0 <= level && level <= P4EST_QMAXLEVEL);
+
+  /* return early if there is nothing to do */
+  if (data_size == 0) {
+    return exc;
+  }
+
+  /* receive data from other processors */
+  for (ng_excl = 0, q = 0; q < num_procs; ++q) {
+    first_real = -1;
+    first_virt = -1;
+    ng_incl = ghost->proc_offsets[q + 1];
+    ng = ng_incl - ng_excl;
+    P4EST_ASSERT (ng >= 0);
+
+    /* if there are any ghosts to be received check if they match the level
+     * criterion (both real and virtual) */
+    if (ng > 0) {
+      P4EST_ASSERT (q != p4est->mpirank);
+      for (lmatches = 0, theg = 0;
+           theg < (mesh->ghost_level + level)->elem_count; ++theg) {
+        ghst =
+          *(p4est_locidx_t *) sc_array_index (mesh->ghost_level + level,
+                                              theg);
+        if (ng_excl <= ghst && ghst < ng_incl) {
+          if (first_real == -1) {
+            first_real = ghst;
+          }
+          ++lmatches;
+        }
+      }
+      for (theg = 0;
+           theg < (virtual_quads->virtual_glevels + level)->elem_count;
+           ++theg) {
+        ghst =
+          *(p4est_locidx_t *) sc_array_index (virtual_quads->virtual_glevels +
+                                              level, theg);
+        if (ng_excl <= ghst && ghst < ng_incl) {
+          if (first_virt == -1) {
+            first_virt = ghst;
+          }
+          lmatches += P4EST_CHILDREN;
+        }
+      }
+
+      if (lmatches > 0) {
+        P4EST_ASSERT (first_virt != -1 || first_real != -1);
+        P4EST_ASSERT (first_real != first_virt);
+
+        r = (sc_MPI_Request *) sc_array_push (&exc->requests);
+        /* We can use the ghost data memory as is */
+        /* 4 cases to distinguish:
+         * a) no virtual quads
+         * b) no real quads
+         * c) real and virtual quads, first quad is real
+         * d) real and virtual quads, first quad is virtual
+         * leads to 2 different cases: offset is determined from real quadrant
+         * (a, c) or from virtual quadrant (b, d)
+         */
+        if ((first_virt == -1)
+            || ((first_real < first_virt) && (first_real != -1))) {
+          offset = virtual_quads->quad_greal_offset[first_real];
+        }
+        else if ((first_real == -1)
+                 || ((first_virt < first_real) && (first_virt != -1))) {
+          offset = virtual_quads->quad_gvirtual_offset[first_virt];
+        }
+        else {
+          SC_ABORT_NOT_REACHED ();
+        }
+        mpiret =
+          sc_MPI_Irecv ((uint8_t *) ghost_data[level] + offset * data_size,
+                        lmatches * data_size, sc_MPI_BYTE, q,
+                        P4EST_COMM_GHOST_EXCHANGE, p4est->mpicomm, r);
+        SC_CHECK_MPI (mpiret);
+      }
+    }
+    ng_excl = ng_incl;
+  }
+
+  /* send data to other processors */
+  for (ng_excl = 0, q = 0; q < num_procs; ++q) {
+    ng_incl = ghost->mirror_proc_offsets[q + 1];
+
+    ng = ng_incl - ng_excl;
+    P4EST_ASSERT (ng >= 0);
+    /* if there is anything to send to the neighboring process for all levels */
+    if (ng > 0) {
+      /* count how many quadrants match the level criterion:
+       * either they have a matching level or are one level coarser holding
+       * virtual quadrants
+       */
+      for (lmatches = 0, theg = ng_excl; theg < ng_incl; ++theg) {
+        mirror_idx = ghost->mirror_proc_mirrors[theg];
+        mirror_qid = mesh->mirror_qid[mirror_idx];
+        m = p4est_quadrant_array_index (&ghost->mirrors, mirror_idx);
+        if (m->level == level) {
+          ++lmatches;
+        }
+        else if (m->level == (level - 1)
+                 && virtual_ghost->mirror_proc_virtuals[theg]) {
+          P4EST_ASSERT (-1 != virtual_quads->virtual_qflags[mirror_qid]);
+          lmatches += P4EST_CHILDREN;
+        }
+      }
+      if (0 < lmatches) {
+        /* every peer populates its own send buffer */
+        sbuf = (char **) sc_array_push (&exc->sbuffers);
+        mem = *sbuf = P4EST_ALLOC (char, lmatches * data_size);
+
+        for (theg = ng_excl; theg < ng_incl; ++theg) {
+          mirror_idx = ghost->mirror_proc_mirrors[theg];
+          m = p4est_quadrant_array_index (&ghost->mirrors, mirror_idx);
+          mirror_qid = mesh->mirror_qid[mirror_idx];
+          if (m->level == level) {
+            offset = virtual_quads->quad_qreal_offset[mirror_qid];
+            P4EST_ASSERT (0 <= offset && offset <
+                          ((mesh->quad_level + level)->elem_count +
+                           P4EST_CHILDREN * (virtual_quads->virtual_qlevels +
+                                             level)->elem_count));
+            memcpy (mem, (uint8_t *) mirror_data[level] + data_size * offset,
+                    data_size);
+            mem += data_size;
+          }
+          else if (m->level == (level - 1)
+                   && virtual_ghost->mirror_proc_virtuals[theg]) {
+            offset = virtual_quads->quad_qvirtual_offset[mirror_qid];
+            P4EST_ASSERT (0 <= offset && offset <
+                          ((mesh->quad_level + level)->elem_count +
+                           P4EST_CHILDREN * (virtual_quads->virtual_qlevels +
+                                             level)->elem_count));
+            memcpy (mem, (uint8_t *) mirror_data[level] + data_size * offset,
+                    P4EST_CHILDREN * data_size);
+            mem += P4EST_CHILDREN * data_size;
+          }
+        }
+        r = (sc_MPI_Request *) sc_array_push (&exc->requests);
+        mpiret = sc_MPI_Isend (*sbuf, lmatches * data_size, sc_MPI_BYTE, q,
+                               P4EST_COMM_GHOST_EXCHANGE, p4est->mpicomm, r);
+        SC_CHECK_MPI (mpiret);
+      }
+      ng_excl = ng_incl;
+    }
+  }
+
+  /* we are done posting messages */
+  return exc;
+}
+
+void
+p4est_virtual_ghost_exchange_data_level_end (p4est_virtual_ghost_exchange_t *
+                                             exc)
+{
+  int                 mpiret;
+  size_t              zz;
+  char              **sbuf;
+
+  /* don't confuse it with p4est_virtual_ghost_exchange_end */
+  P4EST_ASSERT (exc->is_levels);
+
+  /* wait for messages to complete and clean up */
+  mpiret = sc_MPI_Waitall (exc->requests.elem_count, (sc_MPI_Request *)
+                           exc->requests.array, sc_MPI_STATUSES_IGNORE);
+  SC_CHECK_MPI (mpiret);
+  sc_array_reset (&exc->requests);
+  for (zz = 0; zz < exc->sbuffers.elem_count; ++zz) {
+    sbuf = (char **) sc_array_index (&exc->sbuffers, zz);
+    P4EST_FREE (*sbuf);
+  }
+  sc_array_reset (&exc->sbuffers);
+
+  P4EST_FREE (exc);
+
+  return;
+}

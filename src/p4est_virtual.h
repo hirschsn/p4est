@@ -192,9 +192,7 @@ typedef struct p4est_virtual_ghost_exchange
   int                 minlevel, maxlevel;
   size_t              data_size;
   void              **ghost_data;
-  int                *qactive, *qbuffer;
   sc_array_t          requests, sbuffers;
-  sc_array_t          rrequests, rbuffers;
 } p4est_virtual_ghost_exchange_t;
 
 /** Extend p8est_ghost such that payload can be exchanged including virtual
@@ -237,14 +235,16 @@ size_t              p4est_virtual_ghost_memory_used (p4est_virtual_ghost_t *
 /** Convenience function for exchanging contiguous data including that of
  * virtual quadrants.  Using this function prevents overlapping computation and
  * communication.
- * \param[in] p4est
- * \param[in] ghost
- * \param[in] mesh
- * \param[in] virtual_quads
- * \param[in] virtual_ghost
- * \param[in] data_size
- * \param[in] mirror_data
- * \param[in] ghost_data
+ * \param[in]      p4est           The forest.
+ * \param[in]      ghost           Ghost layer.
+ * \param[in]      mesh            Neighbor information.
+ * \param[in]      virtual_quads   Virtual quadrants.
+ * \param[in]      virtual_ghost   Extension of ghost layer by virtual quadrants
+ * \param[in]      data_size       Size of one local data element
+ * \param[in]      mirror_data     Contiguous data of local quadrants.
+ * \param[in][out] ghost_data      Contiguous data storage that will be
+ *                                 populated during ghost exchange.
+ * \return                         Transient storage
  */
 void                p4est_virtual_ghost_exchange_data
   (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
@@ -252,16 +252,17 @@ void                p4est_virtual_ghost_exchange_data
    size_t data_size, void *mirror_data, void *ghost_data);
 
 /** Initiate message transfer by posting asynchronous sends and receive
- * operations.
- * \param[in] p4est
- * \param[in] ghost
- * \param[in] mesh
- * \param[in] virtual_quads
- * \param[in] virtual_ghost
- * \param[in] data_size
- * \param[in] mirror_data
- * \param[in] ghost_data
- * \return                    Transient storage
+ * operations for contiguous data.
+ * \param[in]      p4est           The forest.
+ * \param[in]      ghost           Ghost layer.
+ * \param[in]      mesh            Neighbor information.
+ * \param[in]      virtual_quads   Virtual quadrants.
+ * \param[in]      virtual_ghost   Extension of ghost layer by virtual quadrants
+ * \param[in]      data_size       Size of one local data element
+ * \param[in]      mirror_data     Contiguous data of local quadrants.
+ * \param[in][out] ghost_data      Contiguous data storage that will be
+ *                                 populated during ghost exchange.
+ * \return                         Transient storage
  */
 p4est_virtual_ghost_exchange_t
   * p4est_virtual_ghost_exchange_data_begin
@@ -269,13 +270,62 @@ p4est_virtual_ghost_exchange_t
    p4est_virtual_t * virtual_quads, p4est_virtual_ghost_t * virtual_ghost,
    size_t data_size, void *mirror_data, void *ghost_data);
 
-/** Finish message transfer and clean up transient storage
+/** Finish message transfer and clean up transient storage for contiguous data.
  * \param[in] exc      Transient storage of data transfer.  Will be freed during
  *                     execution.
  */
 void               p4est_virtual_ghost_exchange_data_end
   (p4est_virtual_ghost_exchange_t * exc);
 
+/** Convenience function for exchanging per-level data including that of
+ * virtual quadrants.  Using this function prevents overlapping computation and
+ * communication.
+ * \param[in]      p4est           The forest.
+ * \param[in]      ghost           Ghost layer.
+ * \param[in]      mesh            Neighbor information.
+ * \param[in]      virtual_quads   Virtual quadrants.
+ * \param[in]      virtual_ghost   Extension of ghost layer by virtual quadrants
+ * \param[in]      level           The level of quadrants whose data will be
+ *                                 exchanged.
+ * \param[in]      data_size       Size of one local data element
+ * \param[in]      mirror_data     Per-level data of local quadrants.
+ * \param[in][out] ghost_data      Per-level data storage that will be populated
+ *                                 during ghost exchange.
+ * \return                         Transient storage
+ */
+void                p4est_virtual_ghost_exchange_data_level
+  (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
+   p4est_virtual_t * virtual_quads, p4est_virtual_ghost_t * virtual_ghost,
+   int level, size_t data_size, void **mirror_data, void **ghost_data);
+
+/** Initiate message transfer by posting asynchronous sends and receive
+ * operations for per-level data.
+ * \param[in]      p4est           The forest.
+ * \param[in]      ghost           Ghost layer.
+ * \param[in]      mesh            Neighbor information.
+ * \param[in]      virtual_quads   Virtual quadrants.
+ * \param[in]      virtual_ghost   Extension of ghost layer by virtual quadrants
+ * \param[in]      level           The level of quadrants whose data will be
+ *                                 exchanged.
+ * \param[in]      data_size       Size of one local data element
+ * \param[in]      mirror_data     Per-level data of local quadrants.
+ * \param[in][out] ghost_data      Per-level data storage that will be populated
+ *                                 during ghost exchange.
+ * \return                         Transient storage
+ * \return                    Transient storage
+ */
+p4est_virtual_ghost_exchange_t
+  * p4est_virtual_ghost_exchange_data_level_begin
+  (p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh,
+   p4est_virtual_t * virtual_quads, p4est_virtual_ghost_t * virtual_ghost,
+   int level, size_t data_size, void **mirror_data, void **ghost_data);
+
+/** Finish message transfer and clean up transient storage for per-level data.
+ * \param[in] exc      Transient storage of data transfer.  Will be freed during
+ *                     execution.
+ */
+void                p4est_virtual_ghost_exchange_data_level_end
+  (p4est_virtual_ghost_exchange_t * exc);
 /* *INDENT-ON* */
 
 /* -------------------------------------------------------------------------- */

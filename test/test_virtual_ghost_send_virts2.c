@@ -95,6 +95,146 @@ check_flat_exchange (p4est_t * p4est, p4est_ghost_t * ghost,
 }
 
 int
+check_level_exchange (p4est_t * p4est, p4est_ghost_t * ghost,
+                      p4est_mesh_t * mesh, p4est_virtual_t * virtual_quads,
+                      p4est_virtual_ghost_t * virtual_ghost)
+{
+  int                 offset;
+  int                 level;
+  int                 i, i_real, i_virt, j;
+  p4est_locidx_t      qid_real, qid_virt;
+  int               **local_buffer;
+  int               **ghost_buffer;
+  p4est_quadrant_t   *ghost_quad;
+
+  local_buffer = P4EST_ALLOC (int *, P4EST_QMAXLEVEL + 1);
+  ghost_buffer = P4EST_ALLOC (int *, P4EST_QMAXLEVEL + 1);
+
+  for (level = 0; level < P4EST_QMAXLEVEL + 1; ++level) {
+    local_buffer[level] =
+      P4EST_ALLOC_ZERO (int,
+                        (mesh->quad_level + level)->elem_count +
+                        P4EST_CHILDREN * (virtual_quads->virtual_qlevels +
+                                          level)->elem_count);
+    ghost_buffer[level] =
+      P4EST_ALLOC_ZERO (int,
+                        (mesh->ghost_level + level)->elem_count +
+                        P4EST_CHILDREN * (virtual_quads->virtual_glevels +
+                                          level)->elem_count);
+  }
+
+  /* populate local buffer:
+   * All regular quadrants obtain their qid as payload.  Virtual quadrants'
+   * payload is set to -qid.
+   */
+  for (level = 0; level < P4EST_QMAXLEVEL + 1; ++level) {
+    for (i_real = 0, i_virt = 0, i = 0;
+         i < ((mesh->quad_level + level)->elem_count +
+              (virtual_quads->virtual_qlevels + level)->elem_count); ++i) {
+      if (i_real < (mesh->quad_level + level)->elem_count) {
+        qid_real =
+          *(p4est_locidx_t *) sc_array_index (mesh->quad_level + level,
+                                              i_real);
+      }
+      else {
+        qid_real = INT_MAX;
+      }
+      if (i_virt < (virtual_quads->virtual_qlevels + level)->elem_count) {
+        qid_virt =
+          *(p4est_locidx_t *) sc_array_index (virtual_quads->virtual_qlevels +
+                                              level, i_virt);
+      }
+      else {
+        qid_virt = INT_MAX;
+      }
+      if (qid_real < qid_virt) {
+        offset = virtual_quads->quad_qreal_offset[qid_real];
+        P4EST_ASSERT (local_buffer[level][offset] == 0);
+        local_buffer[level][offset] = qid_real;
+        ++i_real;
+      }
+      else if (qid_virt < qid_real) {
+        offset = virtual_quads->quad_qvirtual_offset[qid_virt];
+        P4EST_ASSERT (-1 != offset);
+        for (j = 0; j < P4EST_CHILDREN; ++j) {
+          P4EST_ASSERT (local_buffer[level][offset + j] == 0);
+          local_buffer[level][offset + j] = -qid_virt;
+        }
+        ++i_virt;
+      }
+      else {
+        P4EST_ASSERT (qid_real == qid_virt);
+        P4EST_ASSERT (qid_real == INT_MAX);
+      }
+    }
+  }
+
+  /* perform ghost-exchange */
+  for (level = 0; level < P4EST_QMAXLEVEL + 1; ++level) {
+    p4est_virtual_ghost_exchange_data_level (p4est, ghost, mesh,
+                                             virtual_quads, virtual_ghost,
+                                             level, sizeof (int),
+                                             (void **) local_buffer,
+                                             (void **) ghost_buffer);
+  }
+
+  /* check that the correct data was received */
+  for (level = 0; level < P4EST_QMAXLEVEL + 1; ++level) {
+    for (i = 0, i_real = 0, i_virt = 0;
+         i < ((mesh->ghost_level + level)->elem_count +
+              (virtual_quads->virtual_glevels + level)->elem_count); ++i) {
+      if (i_real < (mesh->ghost_level + level)->elem_count) {
+        qid_real =
+          *(p4est_locidx_t *) sc_array_index (mesh->ghost_level + level,
+                                              i_real);
+        ++i_real;
+      }
+      else {
+        qid_real = INT_MAX;
+      }
+      if (i_virt < (virtual_quads->virtual_glevels + level)->elem_count) {
+        qid_virt =
+          *(p4est_locidx_t *) sc_array_index (virtual_quads->virtual_glevels +
+                                              level, i_virt);
+        ++i_virt;
+      }
+      else {
+        qid_virt = INT_MAX;
+      }
+      if (qid_real < qid_virt) {
+        ghost_quad = p4est_quadrant_array_index (&ghost->ghosts, qid_real);
+        offset = virtual_quads->quad_greal_offset[qid_real];
+        P4EST_ASSERT (ghost_quad->level == level);
+        P4EST_ASSERT (ghost_buffer[level][offset] ==
+                      ghost_quad->p.piggy3.local_num);
+      }
+      else if (qid_virt < qid_real) {
+        ghost_quad = p4est_quadrant_array_index (&ghost->ghosts, qid_virt);
+        offset = virtual_quads->quad_gvirtual_offset[qid_virt];
+        P4EST_ASSERT (ghost_quad->level + 1 == level);
+        for (j = 0; j < P4EST_CHILDREN; ++j) {
+          P4EST_ASSERT (ghost_buffer[level][offset + j] ==
+                        -ghost_quad->p.piggy3.local_num);
+        }
+      }
+      else {
+        P4EST_ASSERT (qid_real == qid_virt);
+        P4EST_ASSERT (qid_real == INT_MAX);
+      }
+    }
+  }
+
+  for (level = 0; level < P4EST_QMAXLEVEL + 1; ++level) {
+    P4EST_FREE (local_buffer[level]);
+    P4EST_FREE (ghost_buffer[level]);
+  }
+  P4EST_FREE (local_buffer);
+  P4EST_FREE (ghost_buffer);
+
+  return 0;
+}
+
+int
 check_virtual_ghost (sc_MPI_Comm mpicomm)
 {
   p4est_locidx_t     *received_mirror_flags;
@@ -120,8 +260,8 @@ check_virtual_ghost (sc_MPI_Comm mpicomm)
 
   /* setup anything else */
   ghost = p4est_ghost_new (p4est, btype);
-  mesh = p4est_mesh_new_ext (p4est, ghost, 1, 0, 1, btype);
-  virtual_quads = p4est_virtual_new (p4est, ghost, mesh, btype);
+  mesh = p4est_mesh_new_ext (p4est, ghost, 1, 1, 1, btype);
+  virtual_quads = p4est_virtual_new_ext (p4est, ghost, mesh, btype, 1);
   virtual_ghost =
     p4est_virtual_ghost_new (p4est, ghost, mesh, virtual_quads, btype);
 
@@ -191,6 +331,7 @@ check_virtual_ghost (sc_MPI_Comm mpicomm)
   }
 
   check_flat_exchange (p4est, ghost, mesh, virtual_quads, virtual_ghost);
+  check_level_exchange (p4est, ghost, mesh, virtual_quads, virtual_ghost);
 
   /* cleanup */
   P4EST_FREE (received_mirror_flags);
@@ -219,7 +360,8 @@ main (int argc, char **argv)
   SC_CHECK_MPI (mpiret);
   mpiret = sc_MPI_Comm_rank (mpicomm, &mpirank);
   SC_CHECK_MPI (mpiret);
-
+  MPI_Comm_set_errhandler(mpicomm, MPI_ERRORS_RETURN);
+  
   /* initialize libsc and p4est */
   sc_init (mpicomm, 1, 1, NULL, SC_LP_DEFAULT);
   p4est_init (NULL, SC_LP_DEFAULT);
