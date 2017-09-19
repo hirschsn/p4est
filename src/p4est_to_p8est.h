@@ -476,6 +476,7 @@
         p8est_virtual_ghost_exchange_data_level_begin
 #define p4est_virtual_ghost_exchange_data_level_end   \
         p8est_virtual_ghost_exchange_data_level_end
+#define p4est_virtual_get_neighbor      p8est_virtual_get_neighbor
 
 /* variables in p4est_virtual */
 #define p4est_virtual_face_neighbors_search_opts \

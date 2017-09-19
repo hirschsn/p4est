@@ -928,3 +928,13 @@ p4est_virtual_ghost_exchange_data_level_end (p4est_virtual_ghost_exchange_t *
 
   return;
 }
+
+int
+p4est_virtual_get_neighbor (p4est_t * p4est, p4est_ghost_t * ghost,
+                            p4est_mesh_t * mesh,
+                            p4est_virtual_t * virtual_quads,
+                            p4est_locidx_t qid, int vid, int dir,
+                            sc_array_t * n_encds, sc_array_t * nqids)
+{
+  return 0;
+}

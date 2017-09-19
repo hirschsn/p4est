@@ -371,6 +371,38 @@ extern const int    p4est_virtual_corner_neighbors_search_opts[P4EST_CHILDREN]
                                                               [P4EST_CHILDREN];
 /* *INDENT-ON* */
 
+/** Neighbor lookup including virtual quadrants.  This function only returns
+ * neighbors of the same size for virtual and real quadrants.
+ * \param[in]      p4est          The forest, must be 2:1 balanced.
+ * \param[in]      ghost          Ghost layer.
+ * \param[in]      mesh           Neighboring information of real quadrants.
+ * \param[in]      virtual_quads  Embedded virtual quadrants at refinement
+ *                                boundaries.
+ * \param[in]      qid            Local quadrant id of current quadrant.
+ * \param[in]      vid            Virtual id of current quadrant.  -1 for real
+ *                                quadrants.
+ * \param[in]      dir            Direction in which to search for neighbors:
+ *                                  0 .. 3 neighbor(-s) across face i,
+ *                                  4 .. 7 neighbor(-s) across corner i-4.
+ * \param    [out] n_encs         Array containing encodings for neighboring
+ *                                quadrants as it is described in
+ *                                \ref p4est_mesh_t.
+ *                                Array must be empty and allocated for ints.
+ * \param    [out] n_qids         Array containing neighboring quadrant ids and
+ *                                virtual ids.  Is populated in the following
+ *                                manner:
+ *                                qid0, vid0, qid1, vid1, ...
+ *                                Array must be empty and allocated for ints.
+ *                                It will have twice the length of n_ends.
+ */
+int                 p4est_virtual_get_neighbor (p4est_t * p4est,
+                                                p4est_ghost_t * ghost,
+                                                p4est_mesh_t * mesh,
+                                                p4est_virtual_t *
+                                                virtual_quads,
+                                                p4est_locidx_t qid, int vid,
+                                                int dir, sc_array_t * n_encs,
+                                                sc_array_t * n_qids);
 SC_EXTERN_C_END;
 
 #endif /* P4EST_VIRTUAL_H */
