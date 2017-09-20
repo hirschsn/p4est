@@ -929,6 +929,87 @@ p4est_virtual_ghost_exchange_data_level_end (p4est_virtual_ghost_exchange_t *
   return;
 }
 
+/** Neighbor lookup for real quadrants that will only return same sized
+ * quadrants as neighbors, real or virtual. That means compared to
+ * \ref p4est_mesh_get_neighbors we obtain the same result for same-sized
+ * quadrants.  For double-sized neighbors we find the respective virtual
+ * quadrant while half-sized neighbors are discarded.
+ * \param[in]      p4est          The forest.
+ * \param[in]      ghost          Ghost layer
+ * \param[in]      mesh           Neighbor information of real quadrants.
+ * \param[in]      virtual_quads  Information which quadrants host virtual
+ *                                quadrants.
+ * \param[in]      qid            Local quadrant-id of the quadrant whose
+ *                                neighbors we are searching.
+ * \param[in]      dir            Direction we search for neighbors.
+ *                                2D:
+ *                                  0 ..  3 neighbor(-s) across face i,
+ *                                  4 ..  7 neighbor(-s) across corner i-4.
+ *                                3D:
+ *                                  0 ..  5 neighbor(-s) across face i,
+ *                                  6 .. 17 neighbor(-s) across edge i-6
+ *                                 18 .. 25 neighbor(-s) across corner i-18.
+ * \param    [out] n_encs         Array containing encodings for neighboring
+ *                                quadrants as it is described in
+ *                                \ref p4est_mesh_t.
+ *                                Array must be empty and allocated for ints.
+ * \param    [out] n_qids         Array containing neighboring quadrant ids and
+ *                                virtual ids.  Is populated in the following
+ *                                manner:
+ *                                qid0, vid0, qid1, vid1, ...
+ *                                Array must be empty and allocated for ints.
+ *                                It will have twice the length of n_ends.
+ */
+static int
+get_neighbor_real (p4est_t * p4est, p4est_ghost_t * ghost,
+                   p4est_mesh_t * mesh, p4est_virtual_t * virtual_quads,
+                   p4est_locidx_t qid, int dir, sc_array_t * n_encs,
+                   sc_array_t * n_qids)
+{
+  return 0;
+}
+
+/** Neighbor lookup for virtual quadrants that will only return same sized
+ * quadrants as neighbors, real or virtual. That means the comparison from the
+ * regular neighbor lookup \ref p4est_mesh_get_neighbors w.r.t. the quadrant's
+ * level takes place between the neighbor and the host quadrant, i.e. a
+ * same-size neighbor is actually a double-sized neighbor w.r.t. a virtual
+ * quadrant.
+ * \param[in]      p4est          The forest.
+ * \param[in]      ghost          Ghost layer
+ * \param[in]      mesh           Neighbor information of real quadrants.
+ * \param[in]      virtual_quads  Information which quadrants host virtual
+ *                                quadrants.
+ * \param[in]      qid            Local quadrant-id of the quadrant whose
+ *                                neighbors we are searching.
+ * \param[in]      dir            Direction we search for neighbors.
+ *                                2D:
+ *                                  0 ..  3 neighbor(-s) across face i,
+ *                                  4 ..  7 neighbor(-s) across corner i-4.
+ *                                3D:
+ *                                  0 ..  5 neighbor(-s) across face i,
+ *                                  6 .. 17 neighbor(-s) across edge i-6
+ *                                 18 .. 25 neighbor(-s) across corner i-18.
+ * \param    [out] n_encs         Array containing encodings for neighboring
+ *                                quadrants as it is described in
+ *                                \ref p4est_mesh_t.
+ *                                Array must be empty and allocated for ints.
+ * \param    [out] n_qids         Array containing neighboring quadrant ids and
+ *                                virtual ids.  Is populated in the following
+ *                                manner:
+ *                                qid0, vid0, qid1, vid1, ...
+ *                                Array must be empty and allocated for ints.
+ *                                It will have twice the length of n_ends.
+ */
+static int
+get_neighbor_virtual (p4est_t * p4est, p4est_ghost_t * ghost,
+                      p4est_mesh_t * mesh, p4est_virtual_t * virtual_quads,
+                      p4est_locidx_t qid, int vid, int dir,
+                      sc_array_t * n_encs, sc_array_t * n_qids)
+{
+  return 0;
+}
+
 int
 p4est_virtual_get_neighbor (p4est_t * p4est, p4est_ghost_t * ghost,
                             p4est_mesh_t * mesh,
@@ -936,5 +1017,46 @@ p4est_virtual_get_neighbor (p4est_t * p4est, p4est_ghost_t * ghost,
                             p4est_locidx_t qid, int vid, int dir,
                             sc_array_t * n_encs, sc_array_t * n_qids)
 {
+  int                 dir_max;
+  switch (virtual_quads->btype) {
+  case P4EST_CONNECT_FACE:
+    dir_max = P4EST_FACES;
+    break;
+#ifdef P4_TO_P8
+  case P8EST_CONNECT_EDGE:
+    dir_max = P4EST_FACES + P8EST_EDGES;
+    break;
+#endif /* P4_TO_P8 */
+  /* *INDENT-OFF* */
+  case P4EST_CONNECT_FULL:
+    dir_max = P4EST_FACES +
+#ifdef P4_TO_P8
+              P8EST_EDGES +
+#endif /* P4_TO_P8 */
+              P4EST_CHILDREN;
+  /* *INDENT-OFF* */
+    break;
+  default:
+    SC_ABORT_NOT_REACHED ();
+  }
+
+  /* check input conditions */
+  P4EST_ASSERT (0 <= qid && qid < p4est->local_num_quadrants);
+  P4EST_ASSERT (-1 <= vid && vid < P4EST_CHILDREN);
+  P4EST_ASSERT (0 <= dir && dir < dir_max);
+  P4EST_ASSERT (0 == n_encs->elem_count && n_encs->elem_size == sizeof (int));
+  P4EST_ASSERT (0 == n_qids->elem_count
+                && n_qids->elem_size == sizeof (p4est_locidx_t));
+
+  /* delegate neighbor lookup depending on type of quadrant */
+  if (-1 == vid) {
+    get_neighbor_real (p4est, ghost, mesh, virtual_quads, qid, dir, n_encs,
+                       n_qids);
+  }
+  else {
+    get_neighbor_virtual (p4est, ghost, mesh, virtual_quads, qid, vid, dir,
+                          n_encs, n_qids);
+  }
+
   return 0;
 }
