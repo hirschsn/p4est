@@ -409,12 +409,12 @@ extern const int    p8est_virtual_corner_neighbors_search_opts[P8EST_CHILDREN]
  *                                quadrants as it is described in
  *                                \ref p4est_mesh_t.
  *                                Array must be empty and allocated for ints.
- * \param    [out] n_qids         Array containing neighboring quadrant ids and
- *                                virtual ids.  Is populated in the following
- *                                manner:
- *                                qid0, vid0, qid1, vid1, ...
+ * \param    [out] n_qids         Array containing neighboring quadrant ids.
+ *                                Array must be empty and allocated for
+ *                                p4est_locidx_t.
+ * \param    [out] n_vids         Array containing neighboring quadrant's
+ *                                virtual ids.  Real quadrants obtain vid -1.
  *                                Array must be empty and allocated for ints.
- *                                It will have twice the length of n_ends.
 */
 int                 p8est_virtual_get_neighbor (p8est_t * p4est,
                                                 p8est_ghost_t * ghost,
@@ -424,7 +424,8 @@ int                 p8est_virtual_get_neighbor (p8est_t * p4est,
                                                 p4est_locidx_t qid, int vid,
                                                 int dir,
                                                 sc_array_t * n_encs,
-                                                sc_array_t * n_qids);
+                                                sc_array_t * n_qids,
+                                                sc_array_t * n_vids);
 SC_EXTERN_C_END;
 
 #endif /* P8EST_VIRTUAL_H */

@@ -953,18 +953,18 @@ p4est_virtual_ghost_exchange_data_level_end (p4est_virtual_ghost_exchange_t *
  *                                quadrants as it is described in
  *                                \ref p4est_mesh_t.
  *                                Array must be empty and allocated for ints.
- * \param    [out] n_qids         Array containing neighboring quadrant ids and
- *                                virtual ids.  Is populated in the following
- *                                manner:
- *                                qid0, vid0, qid1, vid1, ...
+ * \param    [out] n_qids         Array containing neighboring quadrant ids.
+ *                                Array must be empty and allocated for
+ *                                p4est_locidx_t.
+ * \param    [out] n_vids         Array containing neighboring quadrant's
+ *                                virtual ids.  Real quadrants obtain vid -1.
  *                                Array must be empty and allocated for ints.
- *                                It will have twice the length of n_ends.
  */
 static int
 get_neighbor_real (p4est_t * p4est, p4est_ghost_t * ghost,
                    p4est_mesh_t * mesh, p4est_virtual_t * virtual_quads,
                    p4est_locidx_t qid, int dir, sc_array_t * n_encs,
-                   sc_array_t * n_qids)
+                   sc_array_t * n_qids, sc_array_t * n_vids)
 {
   return 0;
 }
@@ -994,18 +994,19 @@ get_neighbor_real (p4est_t * p4est, p4est_ghost_t * ghost,
  *                                quadrants as it is described in
  *                                \ref p4est_mesh_t.
  *                                Array must be empty and allocated for ints.
- * \param    [out] n_qids         Array containing neighboring quadrant ids and
- *                                virtual ids.  Is populated in the following
- *                                manner:
- *                                qid0, vid0, qid1, vid1, ...
+ * \param    [out] n_qids         Array containing neighboring quadrant ids.
+ *                                Array must be empty and allocated for
+ *                                p4est_locidx_t.
+ * \param    [out] n_vids         Array containing neighboring quadrant's
+ *                                virtual ids.  Real quadrants obtain vid -1.
  *                                Array must be empty and allocated for ints.
- *                                It will have twice the length of n_ends.
  */
 static int
 get_neighbor_virtual (p4est_t * p4est, p4est_ghost_t * ghost,
                       p4est_mesh_t * mesh, p4est_virtual_t * virtual_quads,
                       p4est_locidx_t qid, int vid, int dir,
-                      sc_array_t * n_encs, sc_array_t * n_qids)
+                      sc_array_t * n_encs, sc_array_t * n_qids,
+                      sc_array_t * n_vids)
 {
   return 0;
 }
@@ -1015,7 +1016,8 @@ p4est_virtual_get_neighbor (p4est_t * p4est, p4est_ghost_t * ghost,
                             p4est_mesh_t * mesh,
                             p4est_virtual_t * virtual_quads,
                             p4est_locidx_t qid, int vid, int dir,
-                            sc_array_t * n_encs, sc_array_t * n_qids)
+                            sc_array_t * n_encs, sc_array_t * n_qids,
+                            sc_array_t * n_vids)
 {
   int                 dir_max;
   switch (virtual_quads->btype) {
@@ -1047,15 +1049,16 @@ p4est_virtual_get_neighbor (p4est_t * p4est, p4est_ghost_t * ghost,
   P4EST_ASSERT (0 == n_encs->elem_count && n_encs->elem_size == sizeof (int));
   P4EST_ASSERT (0 == n_qids->elem_count
                 && n_qids->elem_size == sizeof (p4est_locidx_t));
+  P4EST_ASSERT (0 == n_vids->elem_count && n_vids->elem_size == sizeof (int));
 
   /* delegate neighbor lookup depending on type of quadrant */
   if (-1 == vid) {
     get_neighbor_real (p4est, ghost, mesh, virtual_quads, qid, dir, n_encs,
-                       n_qids);
+                       n_qids, n_vids);
   }
   else {
     get_neighbor_virtual (p4est, ghost, mesh, virtual_quads, qid, vid, dir,
-                          n_encs, n_qids);
+                          n_encs, n_qids, n_vids);
   }
 
   return 0;
