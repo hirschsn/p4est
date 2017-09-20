@@ -31,26 +31,9 @@
 #include <p8est_extended.h>
 #endif /* !P4_TO_P8 */
 
-#ifndef P4_TO_P8
-
-/* *INDENT-OFF* */
-const int           p4est_virtual_face_neighbors_search_opts[P4EST_CHILDREN]
-                                                            [P4EST_FACES] =
-{{  4,  1,  6,  2 },
- {  0,  5, 10,  3 },
- {  8,  3,  0,  7 },
- {  2,  9,  1, 11 }};
-
-const int           p4est_virtual_corner_neighbors_search_opts[P4EST_CHILDREN]
-                                                              [P4EST_CHILDREN] =
-{{ 12, 10,  8,  3 },
- {  6, 13,  2,  9 },
- {  4,  1, 14, 11 },
- {  0,  5,  7, 15 }};
-/* *INDENT-ON* */
-
-#endif /* P4_TO_P8 */
-
+/* -------------------------------------------------------------------------- */
+/* |                           Virtual quadrants                            | */
+/* -------------------------------------------------------------------------- */
 /** Determine if qid needs to contain virtual quadrants for inner quadrants,
  * i.e. quadrants that are not mirrors.
  * This function can potentially exit the loop earlier than \ref
@@ -928,6 +911,28 @@ p4est_virtual_ghost_exchange_data_level_end (p4est_virtual_ghost_exchange_t *
 
   return;
 }
+
+/* -------------------------------------------------------------------------- */
+/* |                            Neighbor search                             | */
+/* -------------------------------------------------------------------------- */
+
+#ifndef P4_TO_P8
+/* *INDENT-OFF* */
+const int           p4est_virtual_face_neighbors_search_opts[P4EST_CHILDREN]
+                                                            [P4EST_FACES] =
+{{  4,  1,  6,  2 },
+ {  0,  5, 10,  3 },
+ {  8,  3,  0,  7 },
+ {  2,  9,  1, 11 }};
+
+const int           p4est_virtual_corner_neighbors_search_opts[P4EST_CHILDREN]
+                                                              [P4EST_CHILDREN] =
+{{ 12, 10,  8,  3 },
+ {  6, 13,  2,  9 },
+ {  4,  1, 14, 11 },
+ {  0,  5,  7, 15 }};
+/* *INDENT-ON* */
+#endif /* P4_TO_P8 */
 
 /** Neighbor lookup for real quadrants that will only return same sized
  * quadrants as neighbors, real or virtual. That means compared to
