@@ -402,8 +402,9 @@ extern const int    p8est_virtual_corner_neighbors_search_opts[P8EST_CHILDREN]
  * \param[in]      vid            Virtual id of current quadrant.  -1 for real
  *                                quadrants.
  * \param[in]      dir            Direction in which to search for neighbors:
- *                                  0 .. 3 neighbor(-s) across face i,
- *                                  4 .. 7 neighbor(-s) across corner i-4.
+ *                                  0 ..  5 neighbor(-s) across face i,
+ *                                  6 .. 17 neighbor(-s) across edge i-6
+ *                                 18 .. 25 neighbor(-s) across corner i-18.
  * \param    [out] n_encs         Array containing encodings for neighboring
  *                                quadrants as it is described in
  *                                \ref p4est_mesh_t.
