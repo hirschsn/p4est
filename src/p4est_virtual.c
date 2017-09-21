@@ -1189,6 +1189,36 @@ get_neighbor_real (p4est_t * p4est, p4est_ghost_t * ghost,
   return 0;
 }
 
+/** Get opposite face-, (edge-), or corner index
+ * \param [in]   dir  Encoded direction.
+ *
+ * \returns Decoded index of opposite face (, edge,) or corner.
+ */
+static int
+get_opposite (int dir)
+{
+  if (0 <= dir && dir < P4EST_FACES) {
+    return dir ^ 1;
+  }
+#ifdef P4_TO_P8
+  else if (P4EST_FACES <= dir && dir < (P4EST_FACES + P8EST_EDGES)) {
+    return (dir - P4EST_FACES) ^ 3;
+  }
+  else if ((P4EST_FACES + P8EST_EDGES) <= dir
+           && dir < (P4EST_FACES + P8EST_EDGES + P4EST_CHILDREN)) {
+    return (dir - (P4EST_FACES + P8EST_EDGES)) ^ 7;
+  }
+#else /* P4_TO_P8 */
+  else if (P4EST_FACES <= dir && dir < (P4EST_FACES + P4EST_CHILDREN)) {
+    return (dir - P4EST_FACES) ^ 3;
+  }
+#endif /* P4_TO_P8 */
+  else {
+    SC_ABORT_NOT_REACHED ();
+  }
+  return -1;
+}
+
 /** Neighbor lookup for virtual quadrants that will only return same sized
  * quadrants as neighbors, real or virtual. That means the comparison from the
  * regular neighbor lookup \ref p4est_mesh_get_neighbors w.r.t. the quadrant's
@@ -1228,6 +1258,47 @@ get_neighbor_virtual (p4est_t * p4est, p4est_ghost_t * ghost,
                       sc_array_t * n_encs, sc_array_t * n_qids,
                       sc_array_t * n_vids)
 {
+  int                 search_pos;
+  int                 temp_dir = 0;
+  int                *int_ins;
+
+#ifdef P4_TO_P8
+  temp_dir = P8EST_EDGES;
+#endif /* P4_TO_P8 */
+
+  /* inspect what to query */
+  if (0 <= dir && dir < P4EST_FACES) {
+    temp_dir = dir;
+    search_pos = p4est_virtual_face_neighbors_search_opts[vid][dir];
+  }
+#ifdef P4_TO_P8
+  else if (P4EST_FACES <= dir && dir < P4EST_FACES + P8EST_EDGES) {
+    temp_dir = dir - P4EST_FACES;
+    search_pos = p8est_virtual_edge_neighbors_search_opts[vid][temp_dir];
+  }
+  else if (P4EST_FACES + P8EST_EDGES <= dir
+           && dir < P4EST_FACES + P8EST_EDGES + P4EST_CHILDREN)
+#else /* P4_TO_P8 */
+  else if (P4EST_FACES <= dir && dir < P4EST_FACES + P4EST_CHILDREN)
+#endif /* P4_TO_P8 */
+  {
+    temp_dir = dir - temp_dir - P4EST_FACES;
+    search_pos = p4est_virtual_corner_neighbors_search_opts[vid][temp_dir];
+  }
+  else {
+    SC_ABORT_NOT_REACHED ();
+  }
+
+  /* internal query */
+  if (0 <= search_pos && search_pos < P4EST_CHILDREN) {
+    int_ins = sc_array_push (n_qids);
+    *int_ins = qid;
+    int_ins = sc_array_push (n_vids);
+    *int_ins = search_pos;
+    int_ins = sc_array_push (n_encs);
+    *int_ins = get_opposite (temp_dir);
+  }
+
   return 0;
 }
 
