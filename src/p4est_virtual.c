@@ -934,6 +934,165 @@ const int           p4est_virtual_corner_neighbors_search_opts[P4EST_CHILDREN]
 /* *INDENT-ON* */
 #endif /* P4_TO_P8 */
 
+/** Decode encoding obtained in neighbor search.
+ * \param[in]      enc           The normalized encoding, i.e. 0 based and no
+ *                               longer containing ghost status, i.e. 0 <= enc
+ * \param[in]      n_entities    Number of faces, edges, or corners, depending
+ *                               on the direction the neighbor has been looked
+ *                               up.
+ * \param[in]      l_same_size   Lower bound for encoding a neighbor of same
+ *                               size.
+ * \param[in]      u_same_size   Upper bound for encoding a neighbor of same
+ *                               size.
+ * \param[in]      l_double_size Lower bound for encoding a neighbor of double
+ *                               size.
+ * \param[in]      u_double_size Upper bound for encoding a neighbor of double
+ *                               size.
+ * \param[in]      l_half_size   Lower bound for encoding a neighbor of half
+ *                               size.
+ * \param[in]      u_half_size   Upper bound for encoding a neighbor of half
+ *                               size.
+ * \param    [out] n_subquad     Pointer to neighbor subquad index. -1 if
+ *                               neighbor is not twice as big as current quad.
+ * \param    [out] n_orientation Orientation between both quadrants.
+ * \param    [out] n_entity      The index of the entity across which the
+ *                               neighboring sees the querying quadrant.
+ */
+static int
+decode_encoding (int enc, int n_entities, int l_same_size, int u_same_size,
+                 int l_double_size, int u_double_size, int l_half_size,
+                 int u_half_size, int *n_subquad, int *n_orientation,
+                 int *n_entity)
+{
+  int                 e;
+  int8_t              upper_bnd;
+  P4EST_ASSERT (u_same_size == l_double_size && u_double_size == l_half_size);
+  P4EST_ASSERT (l_same_size == 0);
+  P4EST_ASSERT (l_same_size < l_double_size);
+  P4EST_ASSERT (l_double_size <= l_half_size);
+  P4EST_ASSERT (l_same_size <= enc && enc < u_half_size);
+
+  if (l_same_size <= enc && enc < u_same_size) {
+    *n_orientation = enc / n_entities;
+    *n_entity = enc % n_entities;
+    *n_subquad = -1;
+  }
+  else if (l_double_size <= enc && enc < u_double_size) {
+    e = enc;
+    e -= l_double_size;
+    *n_subquad = e / l_double_size;
+    e -= (l_double_size * *n_subquad);
+    *n_orientation = e / n_entities;
+    *n_entity = e % n_entities;
+  }
+  else if (l_half_size <= enc && enc < u_half_size) {
+    e = enc;
+    e -= l_half_size;
+    *n_orientation = e / n_entities;
+    *n_entity = e % n_entities;
+    *n_subquad = -1;
+  }
+  else {
+    SC_ABORT_NOT_REACHED ();
+  }
+
+  /* plausibility check */
+#ifdef P4EST_ENABLE_DEBUG
+  if (n_entities == P4EST_FACES) {
+    upper_bnd = P4EST_HALF;
+  }
+#ifdef P4_TO_P8
+  else if (n_entities == P8EST_EDGES) {
+    upper_bnd = 2;
+  }
+#endif /* P4_TO_P8 */
+  else if (n_entities == P4EST_CHILDREN) {
+    upper_bnd = 1;
+  }
+  else {
+    SC_ABORT_NOT_REACHED ();
+  }
+  P4EST_ASSERT (0 <= *n_orientation && *n_orientation < upper_bnd);
+  P4EST_ASSERT ((-1 == *n_subquad)
+                || (0 <= *n_subquad && *n_subquad < upper_bnd));
+#endif /* P4EST_ENABLE_DEBUG */
+
+  P4EST_ASSERT (0 <= *n_entity && *n_entity < n_entities);
+
+  return 0;
+}
+
+/** Search the correct virtual quadrant within a double-sized neighbor for real
+ * quadrants.
+ * \param[in]      direction
+ * \param[in][out] encoding
+ * \param    [out] vid
+ */
+static int
+get_real_neighbor_vid (int dir, int *encoding, int *vid)
+{
+  int                 n_orientation, n_subquad, n_entity;
+  int                 l_same_size, u_same_size;
+  int                 l_double_size, u_double_size;
+  int                 l_half_size, u_half_size;
+
+  if (0 <= dir && dir < P4EST_FACES) {
+    /* get orientation from encoding */
+#ifdef P4_TO_P8
+    l_same_size = 0;
+    u_same_size = 4 * P4EST_FACES;
+    l_double_size = u_same_size;
+    u_double_size = 120;
+    l_half_size = -24;
+    u_half_size = l_same_size;
+#else /* P4_TO_P8 */
+    l_same_size = 0;
+    u_same_size = 2 * P4EST_FACES;
+    l_double_size = u_same_size;
+    u_double_size = 24;
+    l_half_size = -8;
+    u_half_size = l_same_size;
+#endif /* P4_TO_P8 */
+    decode_encoding (*encoding, P4EST_FACES, l_same_size, u_same_size,
+                     l_double_size, u_double_size, l_half_size, u_half_size,
+                     &n_subquad, &n_orientation, &n_entity);
+
+    *vid =
+      p4est_connectivity_face_neighbor_face_corner (n_subquad, dir, n_entity,
+                                                    n_orientation);
+    *vid = p4est_face_corners[n_entity][*vid];
+  }
+#ifdef P4_TO_P8
+  else if (P4EST_FACES <= dir && dir < P4EST_FACES + P8EST_EDGES) {
+    l_same_size = 0;
+    u_same_size = 2 * P8EST_EDGES;
+    l_double_size = u_same_size;
+    u_double_size = 72;
+    l_half_size = -24;
+    u_half_size = l_same_size;
+
+    decode_encoding (*encoding, P4EST_FACES, l_same_size, u_same_size,
+                     l_double_size, u_double_size, l_half_size, u_half_size,
+                     &n_subquad, &n_orientation, &n_entity);
+    *vid =
+      p8est_connectivity_edge_neighbor_edge_corner (n_subquad, n_orientation);
+    *vid = p8est_edge_corners[n_entity][*vid];
+  }
+  else if (P4EST_FACES + P8EST_EDGES <= dir
+           && dir < P4EST_FACES + P8EST_EDGES + P4EST_CHILDREN)
+#else /* P4_TO_P8 */
+  else if (P4EST_FACES <= dir && dir < P4EST_FACES + P4EST_CHILDREN)
+#endif /* P4_TO_P8 */
+  {
+    /* for corners there is nothing to be done. vid = encoding */
+    *vid = *encoding;
+  }
+  else {
+    SC_ABORT_NOT_REACHED ();
+  }
+  return 0;
+}
+
 /** Neighbor lookup for real quadrants that will only return same sized
  * quadrants as neighbors, real or virtual. That means compared to
  * \ref p4est_mesh_get_neighbors we obtain the same result for same-sized
@@ -971,6 +1130,62 @@ get_neighbor_real (p4est_t * p4est, p4est_ghost_t * ghost,
                    p4est_locidx_t qid, int dir, sc_array_t * n_encs,
                    sc_array_t * n_qids, sc_array_t * n_vids)
 {
+  int                 i;
+  int                 n_vid, n_enc;
+  int                *int_ins;
+  p4est_quadrant_t   *neighbor, *current;
+  sc_array_t         *n_quads = sc_array_new (sizeof (p4est_quadrant_t *));
+
+  current = p4est_mesh_get_quadrant (p4est, mesh, qid);
+
+  /* perform regular neighbor search */
+  p4est_mesh_get_neighbors (p4est, ghost, mesh, qid, dir, n_quads, n_encs,
+                            n_qids);
+
+  /* inspect results and populate n_vids array */
+  for (i = 0; i < n_encs->elem_count; ++i) {
+    neighbor = *(p4est_quadrant_t **) sc_array_index (n_quads, 0);
+    /* same size */
+    if (neighbor->level == current->level) {
+      n_vid = -1;
+      int_ins = (int *) sc_array_push (n_vids);
+      *int_ins = n_vid;
+    }
+    /* double size:
+     * substitute encoding and set correct virtual quadrant */
+    else if (neighbor->level == current->level - 1) {
+      int_ins = (int *) sc_array_index (n_encs, i);
+      n_enc = *int_ins;
+      get_real_neighbor_vid (dir, &n_enc, &n_vid);
+      *int_ins = n_enc;
+
+      int_ins = (int *) sc_array_push (n_vids);
+      *int_ins = n_vid;
+    }
+    /* half size brick and inner */
+    else if ((neighbor->level == current->level + 1)
+             && (n_encs->elem_count == P4EST_HALF)) {
+      sc_array_truncate (n_encs);
+      sc_array_truncate (n_qids);
+      sc_array_destroy (n_quads);
+      return 0;
+    }
+    /* half size non-brick.
+     * CAUTION: Not working yet */
+    else if (neighbor->level == current->level + 1) {
+      /* FIXME: delete P4EST_HALF many quadrants from the respective arrays */
+      SC_ABORTF ("Current quadrant %i is hanging at a non-brick tree-"
+                 "boundary. This is not yet implemented", qid);
+    }
+    else {
+      SC_ABORT_NOT_REACHED ();
+    }
+  }
+
+  /* check output */
+  P4EST_ASSERT (n_qids->elem_count == n_encs->elem_count);
+  P4EST_ASSERT (n_vids->elem_count == n_encs->elem_count);
+
   return 0;
 }
 
