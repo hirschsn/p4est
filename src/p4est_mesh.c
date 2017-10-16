@@ -1415,6 +1415,18 @@ p4est_mesh_get_quadrant (p4est_t * p4est, p4est_mesh_t * mesh,
   return p4est_quadrant_array_index (&tree->quadrants, tree_local_qid);
 }
 
+/** insert one element into result arrays
+ * \param     [out] neighboring_quads  Result array of p4est_quadrant_t *
+ *                                     containing pointers to the respective
+ *                                     adjacent quadrants.
+ * \param     [out] neighboring_encs   Result array of int containing the
+ *                                     neighbor's encoding.
+ * \param     [out] neighboring_qids   Result array of int containing the
+ *                                     neighbor's qid.
+ * \param [in]      neighbor_quad      Element that will be appended to quads
+ * \param [in]      neighbor_encoding  Element that will be appended to encs
+ * \param [in]      neighbor_qid       Element that will be appended to qids
+ */
 static int
 insert_neighbor_elements (sc_array_t * neighboring_quads,
                           sc_array_t * neighboring_encs,
