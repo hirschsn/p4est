@@ -24,10 +24,13 @@
 
 #ifndef P4_TO_P8
 #include <p4est_virtual.h>
+#include <p4est_bits.h>
 #include <p4est_connectivity.h>
 #include <p4est_extended.h>
 #else /* !P4_TO_P8 */
 #include <p8est_virtual.h>
+#include <p8est_bits.h>
+#include <p8est_connectivity.h>
 #include <p8est_extended.h>
 #endif /* !P4_TO_P8 */
 
