@@ -2163,11 +2163,11 @@ static int
 get_virtual_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
                               p4est_mesh_t * mesh,
                               p4est_virtual_t * virtual_quads,
-                              p4est_locidx_t qid, p4est_locidx_t vid, int dir,
-                              sc_array_t * n_encs, sc_array_t * n_qids,
-                              sc_array_t * n_vids)
+                              p4est_locidx_t qid, p4est_locidx_t vid,
+                              int dir, sc_array_t * n_encs,
+                              sc_array_t * n_qids, sc_array_t * n_vids)
 {
-  int                 i;
+  int                 i, *int_ins;
   p4est_locidx_t      lq = mesh->local_num_quadrants;
   p4est_locidx_t      gq = mesh->ghost_num_quadrants;
   p4est_quadrant_t   *curr_quad = p4est_mesh_get_quadrant (p4est, mesh, qid);
@@ -2226,8 +2226,8 @@ get_virtual_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
     tmp_dir -= P4EST_CHILDREN;
     tmp_subquad = tmp_dir / P4EST_FACES;
     tmp_dir = tmp_dir % P4EST_FACES;
-    p4est_mesh_get_neighbors (p4est, ghost, mesh, qid, tmp_dir, NULL, n_encs,
-                              n_qids);
+    p4est_mesh_get_neighbors (p4est, ghost, mesh, qid, tmp_dir, NULL,
+                              n_encs, n_qids);
     P4EST_ASSERT (0 <= tmp_subquad && tmp_subquad < P4EST_HALF);
 
     /* if we obtained a set of hanging quadrants: pass the correct quadrant and
@@ -2310,8 +2310,8 @@ get_virtual_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
     tmp_dir -= 32;
     tmp_subquad = tmp_dir / P8EST_EDGES;
     tmp_dir = tmp_dir % P8EST_EDGES;
-    p4est_mesh_get_neighbors (p4est, ghost, mesh, qid, P4EST_FACES + tmp_dir,
-                              NULL, n_encs, n_qids);
+    p4est_mesh_get_neighbors (p4est, ghost, mesh, qid,
+                              P4EST_FACES + tmp_dir, NULL, n_encs, n_qids);
     P4EST_ASSERT (0 <= tmp_subquad && tmp_subquad < 2);
 
     /* if we obtained a set of hanging quadrants: pass the correct quadrant and
@@ -2398,12 +2398,77 @@ get_virtual_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
                 && neighbor_idx < (lq + gq + mesh->local_num_corners));
 
   /* single diagonally-opposite neighbor, no rotation involved, i.e. implicit
-   * encoding is used. */
+   * encoding is used.  Again, we are interested in smaller neighbors and same
+   * size neighbors hosting virtual quadrants.*/
   if (0 <= neighbor_idx && neighbor_idx < (lq + gq)) {
-
+    if (0 <= neighbor_idx && neighbor_idx < lq) {
+      quad = p4est_mesh_get_quadrant (p4est, mesh, neighbor_idx);
+    }
+    else if (lq <= neighbor_idx && neighbor_idx < (lq + gq)) {
+      quad = p4est_quadrant_array_index (&ghost->ghosts, neighbor_idx - lq);
+    }
+    else {
+      SC_ABORT_NOT_REACHED ();
+    }
+    if ((curr_quad->level == quad->level)
+        && (((0 <= neighbor_idx && neighbor_idx < lq)
+             && (virtual_quads->virtual_qflags[neighbor_idx] != -1))
+            || ((lq <= neighbor_idx && neighbor_idx < (lq + gq))
+                && (virtual_quads->virtual_gflags[neighbor_idx - lq] != -1)))) {
+      neighbor_vid = neighbor_enc = dir ^ (P4EST_CHILDREN - 1);
+    }
+    else if ((curr_quad->level + 1) == quad->level) {
+      neighbor_vid = -1;
+      neighbor_enc = dir ^ (P4EST_CHILDREN - 1);
+    }
+    insert_neighbor_elements (n_encs, n_qids, n_vids, neighbor_enc,
+                              neighbor_idx, neighbor_vid);
+    return 0;
   }
 
-  /* anything else */
+  /* Anything else.  This must be a tree-boundary, i.e. by definition hanging
+   * quadrants do not occur here. */
+  else if ((lq + gq) <= neighbor_idx
+           && neighbor_idx < (lq + gq + mesh->local_num_corners)) {
+    offset = P4EST_FACES;
+#ifdef P4_TO_P8
+    offset += P8EST_EDGES;
+#endif /* P4_TO_P8 */
+    p4est_mesh_get_neighbors (p4est, ghost, mesh, qid, dir + offset, NULL,
+                              n_encs, n_qids);
+    for (i = 0; i < n_encs->elem_count; ++i) {
+      /* FIXME: Remove this assertion and handle this case in code */
+      P4EST_ASSERT (1 == n_encs->elem_count);
+      neighbor_idx = *(int *) sc_array_index (n_qids, i);
+      neighbor_enc = *(int *) sc_array_index (n_encs, i);
+      P4EST_ASSERT (0 <= neighbor_idx && neighbor_idx < (lq + gq));
+      quad = neighbor_idx < lq ?
+        p4est_mesh_get_quadrant (p4est, mesh, neighbor_idx) :
+        p4est_quadrant_array_index (&ghost->ghosts, neighbor_idx - lq);
+      if ((curr_quad->level == quad->level)
+          && (((0 <= neighbor_idx && neighbor_idx < lq)
+               && (virtual_quads->virtual_qflags[neighbor_idx] != -1))
+              || ((lq <= neighbor_idx && neighbor_idx < (lq + gq))
+                  && (virtual_quads->virtual_gflags[neighbor_idx - lq] !=
+                      -1)))) {
+        neighbor_vid = neighbor_enc;
+        int_ins = (int *) sc_array_push (n_vids);
+        *int_ins = neighbor_vid;
+      }
+      else if ((curr_quad->level + 1) == quad->level) {
+        neighbor_vid = -1;
+        int_ins = (int *) sc_array_push (n_vids);
+        *int_ins = neighbor_vid;
+      }
+      else {
+        sc_array_truncate (n_qids);
+        sc_array_truncate (n_encs);
+      }
+    }
+  }
+  else {
+    SC_ABORT_NOT_REACHED ();
+  }
   return 0;
 }
 
