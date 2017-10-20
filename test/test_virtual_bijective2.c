@@ -328,8 +328,6 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
           SC_ABORT_NOT_REACHED ();
         }
 
-        success = 0;
-
         /** search neighbors */
         limit =
           (-1 ==
@@ -340,9 +338,10 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
           sc_array_truncate (neighboring_encs);
           sc_array_truncate (neighboring_qids);
           sc_array_truncate (neighboring_vids);
+          success = 0;
 
           p4est_virtual_get_neighbor (p4est, ghost, mesh, virtual_quads,
-                                      norm_quad, vid, dir, neighboring_encs,
+                                      norm_quad, vid, i, neighboring_encs,
                                       neighboring_qids, neighboring_vids);
           P4EST_ASSERT (neighboring_encs->elem_count ==
                         neighboring_qids->elem_count);
@@ -363,6 +362,7 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
 
             /** we can only search neighbors of local quadrants */
             if (lq <= neighbor_qid) {
+              success = 1;
               continue;
             }
 
@@ -431,8 +431,8 @@ int
 test_virtual_one_tree (p4est_t * p4est, p4est_connectivity_t * conn,
                        int8_t periodic, sc_MPI_Comm mpicomm)
 {
-  int                 minLevel = 2;
-  p4est_connect_type_t btype = P4EST_CONNECT_FACE;
+  int                 minLevel = 3;
+  p4est_connect_type_t btype = P4EST_CONNECT_FULL;
   p4est_ghost_t      *ghost;
   p4est_mesh_t       *mesh;
   p4est_virtual_t    *virtual_quads;
@@ -492,7 +492,7 @@ test_virtual_two_trees (p4est_t * p4est, p4est_connectivity_t * conn,
 {
   int                 conn_face_tree1, conn_face_tree2, orientation;
   int                 minLevel = 3;
-  p4est_connect_type_t btype = P4EST_CONNECT_FULL;
+  p4est_connect_type_t btype = P4EST_CONNECT_FACE;
   p4est_ghost_t      *ghost;
   p4est_mesh_t       *mesh;
   p4est_virtual_t    *virtual_quads;
@@ -670,7 +670,7 @@ main (int argc, char **argv)
   int                 test_single, test_two_trees;
   int                 test_multi_brick, test_multi_non_brick;
   test_single = 1;
-  test_two_trees = 0;
+  test_two_trees = 1;
   test_multi_brick = 1;
   test_multi_non_brick = 0;
 
