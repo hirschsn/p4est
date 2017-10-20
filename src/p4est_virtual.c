@@ -1259,6 +1259,7 @@ get_real_neighbor_vid (int dir, int *encoding, int *vid)
                      l_double_size, u_double_size, l_half_size, u_half_size,
                      &n_subquad, &n_orientation, &n_entity);
 
+    *encoding = P4EST_FACES * n_orientation + n_entity;
     *vid =
       p4est_connectivity_face_neighbor_face_corner (n_subquad, dir, n_entity,
                                                     n_orientation);
