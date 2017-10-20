@@ -1296,6 +1296,54 @@ get_real_neighbor_vid (int dir, int *encoding, int *vid)
   return 0;
 }
 
+static int
+get_corner_hanging_face (p4est_t * p4est, p4est_ghost_t * ghost,
+                         p4est_mesh_t * mesh,
+                         p4est_virtual_t * virtual_quads,
+                         p4est_locidx_t qid,
+                         p4est_locidx_t vid, int dir,
+                         sc_array_t * n_encs,
+                         sc_array_t * n_qids, sc_array_t * n_vids)
+{
+#ifdef P4EST_ENABLE_DEBUG
+  int                 nqid;
+  p4est_quadrant_t   *q, *n;
+#endif /* P4EST_ENABLE_DEBUG */
+
+  int                 enc;
+  int                *int_ins;
+
+  P4EST_ASSERT (n_vids->elem_count == 0);
+  P4EST_ASSERT (n_encs->elem_count == 0);
+  P4EST_ASSERT (n_qids->elem_count == 0);
+
+  p4est_mesh_get_neighbors (p4est, ghost, mesh, qid, dir, NULL, NULL, n_qids);
+
+  P4EST_ASSERT (n_qids->elem_count == 1);
+#ifdef P4EST_ENABLE_DEBUG
+  nqid = *(int *) sc_array_index (n_qids, 0);
+  P4EST_ASSERT (0 <= nqid
+                && nqid <
+                (mesh->local_num_quadrants + mesh->ghost_num_quadrants));
+  q = p4est_mesh_get_quadrant (p4est, mesh, qid);
+  n =
+    nqid < mesh->local_num_quadrants ? p4est_mesh_get_quadrant (p4est, mesh,
+                                                                nqid) :
+    p4est_quadrant_array_index (&ghost->ghosts,
+                                nqid - mesh->local_num_quadrants);
+  P4EST_ASSERT (n->level + 1 == q->level);
+#endif /* P4EST_ENABLE_DEBUG */
+
+  enc =
+    p4est_connectivity_face_neighbor_corner (vid, dir, get_opposite (dir), 0);
+  int_ins = sc_array_push (n_encs);
+  *int_ins = enc;
+  int_ins = sc_array_push (n_vids);
+  *int_ins = enc;
+
+  return 0;
+}
+
 /** Neighbor lookup for real quadrants that will only return same sized
  * quadrants as neighbors, real or virtual. That means compared to
  * \ref p4est_mesh_get_neighbors we obtain the same result for same-sized
