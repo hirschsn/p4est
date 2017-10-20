@@ -1115,13 +1115,13 @@ decode_encoding (int enc, int n_entities, int l_same_size, int u_same_size,
                  int u_half_size, int *n_subquad, int *n_orientation,
                  int *n_entity)
 {
-  int                 e;
   int8_t              upper_bnd;
-  P4EST_ASSERT (u_same_size == l_double_size && u_double_size == l_half_size);
-  P4EST_ASSERT (l_same_size == 0);
+  int                 e = enc;
+
+  P4EST_ASSERT ((u_half_size == l_same_size) && (l_same_size == 0));
+  P4EST_ASSERT (u_same_size == l_double_size);
+  P4EST_ASSERT (l_half_size <= l_same_size);
   P4EST_ASSERT (l_same_size < l_double_size);
-  P4EST_ASSERT (l_half_size <= u_half_size);
-  P4EST_ASSERT (l_half_size <= enc && enc < u_double_size);
 
   if (l_same_size <= enc && enc < u_same_size) {
     *n_orientation = enc / n_entities;
