@@ -1728,11 +1728,14 @@ get_neighbor_real (p4est_t * p4est,
  * All parameters are defined exactly as in \ref p4est_virtual_get_neighbor.
  */
 static int
-get_virtual_face_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
+get_virtual_face_neighbors (p4est_t * p4est,
+                            p4est_ghost_t * ghost,
                             p4est_mesh_t * mesh,
-                            p4est_virtual_t * virtual_quads,
+                            p4est_virtual_t *
+                            virtual_quads,
                             p4est_locidx_t qid,
-                            p4est_locidx_t vid, int dir,
+                            p4est_locidx_t vid,
+                            int dir,
                             sc_array_t * n_encs,
                             sc_array_t * n_qids, sc_array_t * n_vids)
 {
@@ -1744,25 +1747,21 @@ get_virtual_face_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
   p4est_quadrant_t   *curr_quad = p4est_mesh_get_quadrant (p4est, mesh, qid);
   p4est_quadrant_t   *quad;
 #endif /* P4EST_ENABLE_DEBUG */
-  p4est_locidx_t      neighbor_idx, neighbor_enc, neighbor_vid,
-    neighbor_subid;
+  p4est_locidx_t      neighbor_idx, neighbor_enc,
+    neighbor_vid, neighbor_subid;
   int                 neighbor_subquad, neighbor_orientation;
   int                 neighbor_entity_index;
   int                 tmp_dir;
   p4est_locidx_t      quad_idx;
   p4est_locidx_t     *quad_ptr;
-
   P4EST_ASSERT (0 <= dir && dir < P4EST_FACES);
-
   tmp_dir = p4est_virtual_face_neighbors_search_opts[vid][dir];
-
   /** internal neighbor */
   if (0 <= tmp_dir && tmp_dir < P4EST_CHILDREN) {
     neighbor_idx = qid;
     neighbor_enc = get_opposite (dir);
-    insert_neighbor_elements (n_encs, n_qids, n_vids, neighbor_enc,
-                              neighbor_idx, tmp_dir);
-
+    insert_neighbor_elements (n_encs, n_qids, n_vids,
+                              neighbor_enc, neighbor_idx, tmp_dir);
     return 0;
   }
 
@@ -1781,11 +1780,9 @@ get_virtual_face_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
   l_half_size = -8;
   u_half_size = l_same_size;
 #endif /* P4_TO_P8 */
-
   /** perform external neighbor search */
   neighbor_idx = mesh->quad_to_quad[P4EST_FACES * qid + dir];
   neighbor_enc = mesh->quad_to_face[P4EST_FACES * qid + dir];
-
   /** no neighbor present */
   if ((neighbor_idx == qid) && neighbor_enc == dir) {
     return 0;
@@ -1812,18 +1809,18 @@ get_virtual_face_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
     }
 
     /** decode encoding to obtain orientation and neighboring face index */
-    decode_encoding (neighbor_enc, P4EST_FACES, l_same_size, u_same_size,
-                     l_double_size, u_double_size, l_half_size, u_half_size,
-                     &neighbor_subquad, &neighbor_orientation,
-                     &neighbor_entity_index);
-
+    decode_encoding (neighbor_enc, P4EST_FACES,
+                     l_same_size, u_same_size,
+                     l_double_size, u_double_size,
+                     l_half_size, u_half_size,
+                     &neighbor_subquad,
+                     &neighbor_orientation, &neighbor_entity_index);
     /** find neighboring subquad from own vid across face */
     neighbor_vid =
       p4est_connectivity_face_neighbor_corner (vid, dir,
                                                neighbor_entity_index,
                                                neighbor_orientation);
     P4EST_ASSERT (0 <= neighbor_vid && neighbor_vid < P4EST_CHILDREN);
-
     if (neighbor_idx < lq) {
 #ifdef P4EST_ENABLE_DEBUG
       quad = p4est_mesh_get_quadrant (p4est, mesh, neighbor_idx);
@@ -1839,8 +1836,8 @@ get_virtual_face_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
     /* sanity check level */
     P4EST_ASSERT (quad->level == curr_quad->level);
 #endif /* P4EST_ENABLE_DEBUG */
-    insert_neighbor_elements (n_encs, n_qids, n_vids, neighbor_enc,
-                              neighbor_idx, neighbor_vid);
+    insert_neighbor_elements (n_encs, n_qids, n_vids,
+                              neighbor_enc, neighbor_idx, neighbor_vid);
   }
   /** double size neighbor:
    * Only real quadrants are looking for neighbors here. Do not take any action
@@ -1855,17 +1852,16 @@ get_virtual_face_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
   else if (l_half_size <= neighbor_enc && neighbor_enc < u_half_size) {
     quad_ptr =
       (p4est_locidx_t *) sc_array_index (mesh->quad_to_half, neighbor_idx);
-
-    decode_encoding (neighbor_enc, P4EST_FACES, l_same_size, u_same_size,
-                     l_double_size, u_double_size, l_half_size, u_half_size,
-                     &neighbor_subquad, &neighbor_orientation,
-                     &neighbor_entity_index);
-
+    decode_encoding (neighbor_enc, P4EST_FACES,
+                     l_same_size, u_same_size,
+                     l_double_size, u_double_size,
+                     l_half_size, u_half_size,
+                     &neighbor_subquad,
+                     &neighbor_orientation, &neighbor_entity_index);
     /** find neighboring subquad from own vid across face:
      * Lookup face corner index and transform it across face */
     neighbor_subid = p4est_corner_face_corners[vid][dir];
     P4EST_ASSERT (0 <= neighbor_subid && neighbor_subid < P4EST_HALF);
-
     quad_idx = quad_ptr[neighbor_subid];
     if (quad_idx < lq) {
 #ifdef P4EST_ENABLE_DEBUG
@@ -1886,8 +1882,8 @@ get_virtual_face_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
     P4EST_ASSERT (quad->level == curr_quad->level + 1);
 #endif /* P4EST_ENABLE_DEBUG */
     neighbor_vid = -1;
-    insert_neighbor_elements (n_encs, n_qids, n_vids, neighbor_enc,
-                              quad_idx, neighbor_vid);
+    insert_neighbor_elements (n_encs, n_qids, n_vids,
+                              neighbor_enc, quad_idx, neighbor_vid);
   }
   return 0;
 }
@@ -1897,13 +1893,16 @@ get_virtual_face_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
  * All parameters are defined exactly as in \ref p4est_virtual_get_neighbor
  */
 static int
-get_virtual_edge_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
+get_virtual_edge_neighbors (p4est_t * p4est,
+                            p4est_ghost_t * ghost,
                             p4est_mesh_t * mesh,
-                            p4est_virtual_t * virtual_quads,
+                            p4est_virtual_t *
+                            virtual_quads,
                             p4est_locidx_t qid,
-                            p4est_locidx_t vid, int dir,
-                            sc_array_t * n_encs, sc_array_t * n_qids,
-                            sc_array_t * n_vids)
+                            p4est_locidx_t vid,
+                            int dir,
+                            sc_array_t * n_encs,
+                            sc_array_t * n_qids, sc_array_t * n_vids)
 {
   int                 i;
   p4est_locidx_t      lq = mesh->local_num_quadrants;
@@ -1923,16 +1922,13 @@ get_virtual_edge_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
   int                 opp_edge_offset, opp_corner_offset;
   int                 tmp_corner;
   int                 edge_offset, corner_offset;
-
   P4EST_ASSERT (0 <= dir && dir < P8EST_EDGES);
-
   tmp_dir = p8est_virtual_edge_neighbors_search_opts[dir][vid];
-
   /** find internal neighbor of a virtual quadrant */
   if (tmp_dir < P4EST_CHILDREN) {
     neighbor_enc = get_opposite (dir + P4EST_FACES);
-    insert_neighbor_elements (n_encs, n_qids, n_vids, neighbor_enc, qid,
-                              tmp_dir);
+    insert_neighbor_elements (n_encs, n_qids, n_vids,
+                              neighbor_enc, qid, tmp_dir);
     return 0;
   }
   l_same_size = 0;
@@ -1944,32 +1940,28 @@ get_virtual_edge_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
   u_double_size_face = 120;
   l_half_size_face = -24;
   u_half_size_face = l_same_size;
-
   /** adapt search direction to grab a specific face neighbor */
   if (P4EST_CHILDREN <= tmp_dir && tmp_dir < 32) {
     tmp_dir -= P8EST_CHILDREN;
     tmp_subindex = tmp_dir / P4EST_FACES;
     tmp_dir = tmp_dir % P4EST_FACES;
-    p4est_mesh_get_neighbors (p4est, ghost, mesh, qid, tmp_dir, NULL,
-                              n_encs, n_qids);
-
+    p4est_mesh_get_neighbors (p4est, ghost, mesh, qid,
+                              tmp_dir, NULL, n_encs, n_qids);
     /** select the correct quadrant among hanging quadrants */
     if (n_encs->elem_count == P4EST_HALF) {
       tmp_qid = *(int *) sc_array_index (n_qids, tmp_subindex);
       tmp_encoding = *(int *) sc_array_index (n_encs, tmp_subindex);
-
       /** decode encoding */
-      decode_encoding (tmp_encoding, P4EST_FACES, l_same_size, u_same_size,
-                       l_double_size, u_double_size_face, l_half_size_face,
-                       u_half_size_face, &tmp_subquad, &tmp_ori, &tmp_entity);
-
+      decode_encoding (tmp_encoding, P4EST_FACES,
+                       l_same_size, u_same_size,
+                       l_double_size, u_double_size_face,
+                       l_half_size_face, u_half_size_face,
+                       &tmp_subquad, &tmp_ori, &tmp_entity);
       sc_array_truncate (n_qids);
       sc_array_truncate (n_encs);
-
       /** set xor operants for obtaining opposite edges and corners across the
        * respective face we were querying */
       set_xor_constants_edge (dir, tmp_dir, &edge_offset, &corner_offset);
-
       /** calculate orientation for edge:
        * 1. calculate index of edge in the neighboring quadrant
        * 2. calculate corner index of hanging quadrant in the neighboring
@@ -1979,32 +1971,31 @@ get_virtual_edge_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
        *  b) else o = 1
        */
       P4EST_ASSERT (0 <= tmp_subindex && tmp_subindex < P4EST_HALF);
-
       r_edge =
-        p8est_connectivity_face_neighbor_edge (dir ^ edge_offset,
+        p8est_connectivity_face_neighbor_edge (dir ^
+                                               edge_offset,
                                                tmp_dir, tmp_entity, tmp_ori);
-
       r_corner =
         p4est_connectivity_face_neighbor_corner (vid ^
                                                  corner_offset,
                                                  tmp_dir,
                                                  tmp_entity, tmp_ori);
-
-      set_xor_constants_edge (r_edge, tmp_entity, &opp_edge_offset,
-                              &opp_corner_offset);
-
-      tmp_corner = p8est_connectivity_edge_neighbor_corner
-        (vid, dir ^ edge_offset, r_edge ^ opp_edge_offset, 0);
+      set_xor_constants_edge (r_edge, tmp_entity,
+                              &opp_edge_offset, &opp_corner_offset);
+      tmp_corner =
+        p8est_connectivity_edge_neighbor_corner (vid,
+                                                 dir ^
+                                                 edge_offset,
+                                                 r_edge ^ opp_edge_offset, 0);
       tmp_ori = (tmp_corner != r_corner);
-      P4EST_ASSERT ((0 == tmp_ori) ||
-                    (r_corner ==
-                     p8est_connectivity_edge_neighbor_corner
-                     (vid, dir ^ edge_offset, r_edge ^ opp_edge_offset, 1)));
-
+      P4EST_ASSERT ((0 == tmp_ori)
+                    || (r_corner ==
+                        p8est_connectivity_edge_neighbor_corner
+                        (vid, dir ^ edge_offset,
+                         r_edge ^ opp_edge_offset, 1)));
       tmp_encoding = tmp_ori * P8EST_EDGES + r_edge;
-
-      insert_neighbor_elements (n_encs, n_qids, n_vids, tmp_encoding,
-                                tmp_qid, -1);
+      insert_neighbor_elements (n_encs, n_qids, n_vids,
+                                tmp_encoding, tmp_qid, -1);
     }
     /* among same sized neighbor: select correct virtual quadrant if it hosts
      * any */
@@ -2012,38 +2003,38 @@ get_virtual_edge_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
       tmp_qid = *(int *) sc_array_index (n_qids, 0);
       P4EST_ASSERT (0 <= tmp_qid && tmp_qid < (lq + gq));
       tmp_encoding = *(int *) sc_array_index (n_encs, 0);
-
       /** Take a look at the encoding:
        * If the neighboring quadrant has the same size and contains virtual
        * quadrants the current quadrant has a neighbor in the neighboring
        * quadrant.
        */
-      if (l_same_size <= tmp_encoding && tmp_encoding < u_same_size &&
-          (((0 <= tmp_qid) && (tmp_qid < lq)
-            && virtual_quads->virtual_qflags[tmp_qid]) ||
-           ((lq <= tmp_qid) && (tmp_qid < (lq + gq))
-            && virtual_quads->virtual_gflags[tmp_qid - lq]))) {
+      if (l_same_size <= tmp_encoding
+          && tmp_encoding < u_same_size && (((0 <= tmp_qid) && (tmp_qid < lq)
+                                             &&
+                                             virtual_quads->virtual_qflags
+                                             [tmp_qid])
+                                            || ((lq <= tmp_qid)
+                                                && (tmp_qid < (lq + gq))
+                                                &&
+                                                virtual_quads->virtual_gflags
+                                                [tmp_qid - lq]))) {
 
         /** decode encoding */
-        decode_encoding (tmp_encoding, P4EST_FACES, l_same_size,
-                         u_same_size, l_double_size, u_double_size_face,
-                         l_half_size_face, u_half_size_face, &tmp_subquad,
-                         &tmp_ori, &tmp_entity);
-
+        decode_encoding (tmp_encoding, P4EST_FACES,
+                         l_same_size, u_same_size,
+                         l_double_size, u_double_size_face,
+                         l_half_size_face, u_half_size_face,
+                         &tmp_subquad, &tmp_ori, &tmp_entity);
         /** transform local face corner index that we have to query into
          * neighboring face and lookup corresponding corner index. */
         tmp_vid =
-          p4est_connectivity_face_neighbor_face_corner (tmp_subindex,
-                                                        tmp_dir, tmp_entity,
-                                                        tmp_ori);
+          p4est_connectivity_face_neighbor_face_corner
+          (tmp_subindex, tmp_dir, tmp_entity, tmp_ori);
         tmp_vid = p8est_face_corners[tmp_entity][tmp_vid];
-
         sc_array_truncate (n_qids);
         sc_array_truncate (n_encs);
-
         /** set xor operants for obtaining opposite edges and corners */
         set_xor_constants_edge (dir, tmp_dir, &edge_offset, &corner_offset);
-
         /** calculate orientation for edge:
          * 1. calculate index of edge in the neighboring quadrant
          * 2. calculate corner index of hanging quadrant in the neighboring
@@ -2053,29 +2044,33 @@ get_virtual_edge_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
          *  b) else o = 1
          */
         P4EST_ASSERT (0 <= tmp_subindex && tmp_subindex < P4EST_HALF);
-
-        r_edge = p8est_connectivity_face_neighbor_edge
-          (dir ^ edge_offset, tmp_dir, tmp_entity, tmp_ori);
-
-        r_corner = p4est_connectivity_face_neighbor_corner
-          (vid ^ corner_offset, tmp_dir, tmp_entity, tmp_ori);
-
-        set_xor_constants_edge (r_edge, tmp_entity, &opp_edge_offset,
-                                &opp_corner_offset);
-
+        r_edge =
+          p8est_connectivity_face_neighbor_edge (dir ^
+                                                 edge_offset,
+                                                 tmp_dir,
+                                                 tmp_entity, tmp_ori);
+        r_corner =
+          p4est_connectivity_face_neighbor_corner (vid ^
+                                                   corner_offset,
+                                                   tmp_dir,
+                                                   tmp_entity, tmp_ori);
+        set_xor_constants_edge (r_edge, tmp_entity,
+                                &opp_edge_offset, &opp_corner_offset);
         tmp_corner =
-          p8est_connectivity_edge_neighbor_corner
-          (vid, dir ^ edge_offset, r_edge ^ opp_edge_offset, 0);
+          p8est_connectivity_edge_neighbor_corner (vid,
+                                                   dir ^
+                                                   edge_offset,
+                                                   r_edge ^
+                                                   opp_edge_offset, 0);
         tmp_ori = (tmp_corner != r_corner);
-        P4EST_ASSERT ((0 == tmp_ori) ||
-                      (r_corner ==
-                       p8est_connectivity_edge_neighbor_corner
-                       (vid, dir ^ edge_offset, r_edge ^ opp_edge_offset,
-                        1)));
-
+        P4EST_ASSERT ((0 == tmp_ori)
+                      || (r_corner ==
+                          p8est_connectivity_edge_neighbor_corner
+                          (vid, dir ^ edge_offset,
+                           r_edge ^ opp_edge_offset, 1)));
         tmp_encoding = tmp_ori * P8EST_EDGES + r_edge;
-        insert_neighbor_elements (n_encs, n_qids, n_vids, tmp_encoding,
-                                  tmp_qid, tmp_vid);
+        insert_neighbor_elements (n_encs, n_qids, n_vids,
+                                  tmp_encoding, tmp_qid, tmp_vid);
       }
       else {
         /* if we do not find a matching quadrant discard result of neighbor
@@ -2096,7 +2091,6 @@ get_virtual_edge_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
   /* external querying across edge, i.e. retain original search direction */
   P4EST_ASSERT (32 <= tmp_dir && tmp_dir < 56);
   neighbor_idx = mesh->quad_to_edge[P8EST_EDGES * qid + dir];
-
   /** Domain boundary: No neighbor present. */
   if (neighbor_idx == -3) {
     return 0;
@@ -2106,18 +2100,17 @@ get_virtual_edge_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
    * boundaries): Collect virtual quadrant */
   if (((0 <= neighbor_idx) && (neighbor_idx < lq)
        && (virtual_quads->virtual_qflags[neighbor_idx] != -1))
-      || ((lq <= neighbor_idx) && (neighbor_idx < (lq + gq))
+      || ((lq <= neighbor_idx)
+          && (neighbor_idx < (lq + gq))
           && (virtual_quads->virtual_gflags[neighbor_idx - lq]))) {
 
     neighbor_enc = dir ^ 3;
-
     neighbor_vid = p8est_edge_edge_corners[dir][vid];
     P4EST_ASSERT (neighbor_vid == 0 || neighbor_vid == 1);
     neighbor_vid = p8est_edge_corners[dir ^ 3][neighbor_vid];
     P4EST_ASSERT (0 <= neighbor_vid && neighbor_vid < P4EST_CHILDREN);
-
-    insert_neighbor_elements (n_encs, n_qids, n_vids, neighbor_enc,
-                              neighbor_idx, neighbor_vid);
+    insert_neighbor_elements (n_encs, n_qids, n_vids,
+                              neighbor_enc, neighbor_idx, neighbor_vid);
     return 0;
   }
   else if ((lq + gq) <= neighbor_idx) {
@@ -2133,20 +2126,17 @@ get_virtual_edge_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
     /* normalize neighbor index */
     neighbor_idx -= (lq + gq);
     P4EST_ASSERT (0 <= neighbor_idx && neighbor_idx < mesh->local_num_edges);
-
     /* get offset and number of adjacent quads as loop boundaries */
     offset = *((p4est_locidx_t *)
                sc_array_index_int (mesh->edge_offset, neighbor_idx));
     n_adj_quads = *((p4est_locidx_t *)
                     sc_array_index_int (mesh->edge_offset, neighbor_idx + 1));
-
     for (i = offset; i < n_adj_quads; ++i) {
-      quad_idx =
-        *((p4est_locidx_t *) sc_array_index_int (mesh->edge_quad, i));
+      quad_idx = *((p4est_locidx_t *)
+                   sc_array_index_int (mesh->edge_quad, i));
       P4EST_ASSERT (0 <= quad_idx && quad_idx < (lq + gq));
-
-      neighbor_enc = *((int8_t *) sc_array_index_int (mesh->edge_edge, i));
-
+      neighbor_enc = *((int8_t *)
+                       sc_array_index_int (mesh->edge_edge, i));
       /* inspect encoding of obtained neighbor */
       if ((l_same_size <= neighbor_enc && neighbor_enc < u_same_size)
           && (((0 <= quad_idx && quad_idx < lq)
@@ -2154,45 +2144,42 @@ get_virtual_edge_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
               || ((lq <= quad_idx && quad_idx < (lq + gq))
                   && virtual_quads->virtual_gflags[quad_idx - lq]))) {
         /* decode it and get virtual id in neighboring quadrant */
-        decode_encoding (neighbor_enc, P8EST_EDGES, l_same_size,
-                         u_same_size, l_double_size, u_double_size,
-                         l_half_size, u_half_size, &tmp_subquad, &tmp_ori,
-                         &tmp_entity);
-
+        decode_encoding (neighbor_enc, P8EST_EDGES,
+                         l_same_size, u_same_size,
+                         l_double_size, u_double_size,
+                         l_half_size, u_half_size,
+                         &tmp_subquad, &tmp_ori, &tmp_entity);
         /** tmp_dir must be between 32 and 55 */
         tmp_dir -= 32;
         tmp_subindex = tmp_dir / P8EST_EDGES;
-
         /** find neighboring vid from own subquad ID */
         neighbor_vid =
-          p8est_connectivity_edge_neighbor_edge_corner (tmp_subindex,
-                                                        tmp_ori);
+          p8est_connectivity_edge_neighbor_edge_corner
+          (tmp_subindex, tmp_ori);
         neighbor_vid = p8est_edge_corners[tmp_entity][neighbor_vid];
         P4EST_ASSERT (0 <= neighbor_vid && neighbor_vid < P4EST_CHILDREN);
-
         /** convert encoding */
         neighbor_enc = P8EST_EDGES * tmp_ori + tmp_entity;
-        insert_neighbor_elements (n_encs, n_qids, n_vids, neighbor_enc,
-                                  quad_idx, neighbor_vid);
+        insert_neighbor_elements (n_encs, n_qids, n_vids,
+                                  neighbor_enc, quad_idx, neighbor_vid);
       }
       else if (l_half_size <= neighbor_enc && neighbor_enc < u_half_size) {
-        decode_encoding (neighbor_enc, P8EST_EDGES, l_same_size,
-                         u_same_size, l_double_size, u_double_size,
-                         l_half_size, u_half_size, &tmp_subquad, &tmp_ori,
-                         &tmp_entity);
-
+        decode_encoding (neighbor_enc, P8EST_EDGES,
+                         l_same_size, u_same_size,
+                         l_double_size, u_double_size,
+                         l_half_size, u_half_size,
+                         &tmp_subquad, &tmp_ori, &tmp_entity);
         /* find neighboring subquad from own vid across edge */
         tmp_subquad = p8est_corner_edge_corners[vid][dir];
         P4EST_ASSERT (0 <= tmp_subquad && tmp_subquad < P4EST_HALF);
         tmp_subquad =
           p8est_connectivity_edge_neighbor_edge_corner (tmp_subquad, tmp_ori);
         P4EST_ASSERT (0 <= tmp_subquad && tmp_subquad < 2);
-
         neighbor_enc = P8EST_EDGES * tmp_ori + tmp_entity;
         neighbor_vid = -1;
         if (i - offset == tmp_subquad) {
-          insert_neighbor_elements (n_encs, n_qids, n_vids, neighbor_enc,
-                                    quad_idx, -1);
+          insert_neighbor_elements (n_encs, n_qids, n_vids,
+                                    neighbor_enc, quad_idx, -1);
         }
       }
     }
@@ -2206,11 +2193,15 @@ get_virtual_edge_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
  * All parameters are defined exactly as in \ref p4est_virtual_get_neighbor
  */
 static int
-get_virtual_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
+get_virtual_corner_neighbors (p4est_t * p4est,
+                              p4est_ghost_t * ghost,
                               p4est_mesh_t * mesh,
-                              p4est_virtual_t * virtual_quads,
-                              p4est_locidx_t qid, p4est_locidx_t vid,
-                              int dir, sc_array_t * n_encs,
+                              p4est_virtual_t *
+                              virtual_quads,
+                              p4est_locidx_t qid,
+                              p4est_locidx_t vid,
+                              int dir,
+                              sc_array_t * n_encs,
                               sc_array_t * n_qids, sc_array_t * n_vids)
 {
   int                 i, *int_ins;
@@ -2230,10 +2221,8 @@ get_virtual_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
   int                 l_half_size_edge, u_half_size_edge;
 #endif /* P4_TO_P8 */
   int                 c_corner, offset;
-
   P4EST_ASSERT (0 <= dir && dir < P4EST_CHILDREN);
   tmp_dir = p4est_virtual_corner_neighbors_search_opts[dir][vid];
-
   /** find internal neighbor of a virtual quadrant */
   if (tmp_dir < P4EST_CHILDREN) {
 #ifndef P4_TO_P8
@@ -2241,8 +2230,8 @@ get_virtual_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
 #else /* P4_TO_P8 */
     neighbor_enc = get_opposite (dir + P8EST_EDGES + P4EST_FACES);
 #endif /* P4_TO_P8 */
-    insert_neighbor_elements (n_encs, n_qids, n_vids, neighbor_enc, qid,
-                              tmp_dir);
+    insert_neighbor_elements (n_encs, n_qids, n_vids,
+                              neighbor_enc, qid, tmp_dir);
     return 0;
   }
 
@@ -2263,7 +2252,6 @@ get_virtual_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
   u_same_size_edge = l_double_size_edge = 24;
   u_double_size_edge = 72;
 #endif /* P4_TO_P8 */
-
   /* external query */
   /* search respective face neighbor */
   if (P4EST_CHILDREN <= tmp_dir
@@ -2272,37 +2260,36 @@ get_virtual_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
     tmp_dir -= P4EST_CHILDREN;
     tmp_subquad = tmp_dir / P4EST_FACES;
     tmp_dir = tmp_dir % P4EST_FACES;
-    p4est_mesh_get_neighbors (p4est, ghost, mesh, qid, tmp_dir, NULL,
-                              n_encs, n_qids);
+    p4est_mesh_get_neighbors (p4est, ghost, mesh, qid,
+                              tmp_dir, NULL, n_encs, n_qids);
     P4EST_ASSERT (0 <= tmp_subquad && tmp_subquad < P4EST_HALF);
-
     /* if we obtained a set of hanging quadrants: pass the correct quadrant and
      * calculate its encoding */
     if (n_qids->elem_count == P4EST_HALF) {
       neighbor_idx = *(int *) sc_array_index (n_qids, tmp_subquad);
       P4EST_ASSERT (0 <= neighbor_idx && neighbor_idx < (lq + gq));
       neighbor_vid = -1;
-
       neighbor_enc = *(int *) sc_array_index (n_encs, tmp_subquad);
       P4EST_ASSERT (l_half_size_face <= neighbor_enc
                     && neighbor_enc < u_half_size_face);
-      decode_encoding (neighbor_enc, P4EST_FACES, l_same_size_face,
-                       u_same_size_face, l_double_size_face,
-                       u_double_size_face, l_half_size_face,
-                       u_double_size_face, &tmp_subindex, &tmp_ori,
-                       &tmp_entity);
+      decode_encoding (neighbor_enc, P4EST_FACES,
+                       l_same_size_face, u_same_size_face,
+                       l_double_size_face,
+                       u_double_size_face,
+                       l_half_size_face,
+                       u_double_size_face, &tmp_subindex,
+                       &tmp_ori, &tmp_entity);
       P4EST_ASSERT (tmp_subindex == tmp_subquad);
-
       set_xor_constants_corner (tmp_dir, &offset);
       c_corner = dir ^ offset;
-
       neighbor_enc =
-        p4est_connectivity_face_neighbor_corner (c_corner, tmp_dir,
+        p4est_connectivity_face_neighbor_corner (c_corner,
+                                                 tmp_dir,
                                                  tmp_entity, tmp_ori);
       sc_array_truncate (n_encs);
       sc_array_truncate (n_qids);
-      insert_neighbor_elements (n_encs, n_qids, n_vids, neighbor_enc,
-                                neighbor_idx, neighbor_vid);
+      insert_neighbor_elements (n_encs, n_qids, n_vids,
+                                neighbor_enc, neighbor_idx, neighbor_vid);
       return 0;
     }
 
@@ -2313,7 +2300,6 @@ get_virtual_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
       neighbor_enc = *(int *) sc_array_index (n_encs, 0);
       neighbor_idx = *(int *) sc_array_index (n_qids, 0);
       P4EST_ASSERT (0 <= neighbor_idx && neighbor_idx < (lq + gq));
-
       if ((l_same_size_face <= neighbor_enc
            && neighbor_enc < u_same_size_face)
           && (((0 <= neighbor_idx && neighbor_idx < lq)
@@ -2322,26 +2308,25 @@ get_virtual_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
                   && (-1 !=
                       virtual_quads->virtual_gflags[neighbor_idx - lq])))) {
 
-        decode_encoding (neighbor_enc, P4EST_FACES, l_same_size_face,
-                         u_same_size_face, l_double_size_face,
-                         u_double_size_face, l_half_size_face,
-                         u_double_size_face, &tmp_subindex, &tmp_ori,
-                         &tmp_entity);
+        decode_encoding (neighbor_enc, P4EST_FACES,
+                         l_same_size_face, u_same_size_face,
+                         l_double_size_face,
+                         u_double_size_face,
+                         l_half_size_face,
+                         u_double_size_face, &tmp_subindex,
+                         &tmp_ori, &tmp_entity);
         P4EST_ASSERT (tmp_subindex == -1);
-
         set_xor_constants_corner (tmp_dir, &offset);
         c_corner = dir ^ offset;
-
         neighbor_enc =
-          p4est_connectivity_face_neighbor_corner (c_corner, tmp_dir,
+          p4est_connectivity_face_neighbor_corner (c_corner,
+                                                   tmp_dir,
                                                    tmp_entity, tmp_ori);
         neighbor_vid = neighbor_enc;
-
         sc_array_truncate (n_encs);
         sc_array_truncate (n_qids);
-
-        insert_neighbor_elements (n_encs, n_qids, n_vids, neighbor_enc,
-                                  neighbor_idx, neighbor_vid);
+        insert_neighbor_elements (n_encs, n_qids, n_vids,
+                                  neighbor_enc, neighbor_idx, neighbor_vid);
         return 0;
       }
 
@@ -2359,35 +2344,31 @@ get_virtual_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
     p4est_mesh_get_neighbors (p4est, ghost, mesh, qid,
                               P4EST_FACES + tmp_dir, NULL, n_encs, n_qids);
     P4EST_ASSERT (0 <= tmp_subquad && tmp_subquad < 2);
-
     /* if we obtained a set of hanging quadrants: pass the correct quadrant and
      * calculate its encoding */
     if (n_qids->elem_count == 2) {
       neighbor_idx = *(int *) sc_array_index (n_qids, tmp_subquad);
       P4EST_ASSERT (0 <= neighbor_idx && neighbor_idx < (lq + gq));
-
       neighbor_enc = *(int *) sc_array_index (n_encs, tmp_subquad);
-
       P4EST_ASSERT (l_half_size_edge <= neighbor_enc
                     && neighbor_enc < u_half_size_edge);
-
-      decode_encoding (neighbor_enc, P8EST_EDGES, l_same_size_edge,
-                       u_same_size_edge, l_double_size_edge,
-                       u_double_size_edge, l_half_size_edge,
-                       u_double_size_edge, &tmp_subindex, &tmp_ori,
-                       &tmp_entity);
+      decode_encoding (neighbor_enc, P8EST_EDGES,
+                       l_same_size_edge, u_same_size_edge,
+                       l_double_size_edge,
+                       u_double_size_edge,
+                       l_half_size_edge,
+                       u_double_size_edge, &tmp_subindex,
+                       &tmp_ori, &tmp_entity);
       P4EST_ASSERT (tmp_subindex == tmp_subquad);
-
       neighbor_enc =
-        p4est_connectivity_face_neighbor_corner (vid, tmp_dir, tmp_entity,
-                                                 tmp_ori);
+        p4est_connectivity_face_neighbor_corner (vid,
+                                                 tmp_dir,
+                                                 tmp_entity, tmp_ori);
       neighbor_vid = -1;
-
       sc_array_truncate (n_encs);
       sc_array_truncate (n_qids);
-
-      insert_neighbor_elements (n_encs, n_qids, n_vids, neighbor_enc,
-                                neighbor_idx, neighbor_vid);
+      insert_neighbor_elements (n_encs, n_qids, n_vids,
+                                neighbor_enc, neighbor_idx, neighbor_vid);
       return 0;
     }
 
@@ -2398,7 +2379,6 @@ get_virtual_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
       neighbor_enc = *(int *) sc_array_index (n_encs, 0);
       neighbor_idx = *(int *) sc_array_index (n_qids, 0);
       P4EST_ASSERT (0 <= neighbor_idx && neighbor_idx < (lq + gq));
-
       if ((l_same_size_edge <= neighbor_enc
            && neighbor_enc < u_same_size_edge)
           && (((0 <= neighbor_idx && neighbor_idx < lq)
@@ -2407,23 +2387,23 @@ get_virtual_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
                   && (-1 !=
                       virtual_quads->virtual_gflags[neighbor_idx - lq])))) {
 
-        decode_encoding (neighbor_enc, P4EST_FACES, l_same_size_face,
-                         u_same_size_face, l_double_size_face,
-                         u_double_size_face, l_half_size_face,
-                         u_double_size_face, &tmp_subindex, &tmp_ori,
-                         &tmp_entity);
+        decode_encoding (neighbor_enc, P4EST_FACES,
+                         l_same_size_face, u_same_size_face,
+                         l_double_size_face,
+                         u_double_size_face,
+                         l_half_size_face,
+                         u_double_size_face, &tmp_subindex,
+                         &tmp_ori, &tmp_entity);
         P4EST_ASSERT (tmp_subindex == -1);
-
         neighbor_enc =
-          p4est_connectivity_face_neighbor_corner (vid, tmp_dir, tmp_entity,
-                                                   tmp_ori);
+          p4est_connectivity_face_neighbor_corner (vid,
+                                                   tmp_dir,
+                                                   tmp_entity, tmp_ori);
         neighbor_vid = neighbor_enc;
-
         sc_array_truncate (n_encs);
         sc_array_truncate (n_qids);
-
-        insert_neighbor_elements (n_encs, n_qids, n_vids, neighbor_enc,
-                                  neighbor_idx, neighbor_vid);
+        insert_neighbor_elements (n_encs, n_qids, n_vids,
+                                  neighbor_enc, neighbor_idx, neighbor_vid);
         return 0;
       }
     }
@@ -2433,7 +2413,6 @@ get_virtual_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
   /* No need to change search direction: perform neighbor lookup across corner.
    */
   neighbor_idx = mesh->quad_to_corner[P4EST_CHILDREN * qid + dir];
-
   /* no neighbor present or hanging neighbor: irrelevant for virtual quadrants.
    */
   if (neighbor_idx < 0) {
@@ -2442,7 +2421,6 @@ get_virtual_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
 
   P4EST_ASSERT (0 <= neighbor_idx
                 && neighbor_idx < (lq + gq + mesh->local_num_corners));
-
   /* single diagonally-opposite neighbor, no rotation involved, i.e. implicit
    * encoding is used.  Again, we are interested in smaller neighbors and same
    * size neighbors hosting virtual quadrants.*/
@@ -2467,30 +2445,32 @@ get_virtual_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
       neighbor_vid = -1;
       neighbor_enc = dir ^ (P4EST_CHILDREN - 1);
     }
-    insert_neighbor_elements (n_encs, n_qids, n_vids, neighbor_enc,
-                              neighbor_idx, neighbor_vid);
+    insert_neighbor_elements (n_encs, n_qids, n_vids,
+                              neighbor_enc, neighbor_idx, neighbor_vid);
     return 0;
   }
 
   /* Anything else.  This must be a tree-boundary, i.e. by definition hanging
    * quadrants do not occur here. */
-  else if ((lq + gq) <= neighbor_idx
-           && neighbor_idx < (lq + gq + mesh->local_num_corners)) {
+  else
+    if ((lq + gq) <= neighbor_idx
+        && neighbor_idx < (lq + gq + mesh->local_num_corners)) {
     offset = P4EST_FACES;
 #ifdef P4_TO_P8
     offset += P8EST_EDGES;
 #endif /* P4_TO_P8 */
-    p4est_mesh_get_neighbors (p4est, ghost, mesh, qid, dir + offset, NULL,
-                              n_encs, n_qids);
+    p4est_mesh_get_neighbors (p4est, ghost, mesh, qid,
+                              dir + offset, NULL, n_encs, n_qids);
     for (i = 0; i < n_encs->elem_count; ++i) {
       /* FIXME: Remove this assertion and handle this case in code */
       P4EST_ASSERT (1 == n_encs->elem_count);
       neighbor_idx = *(int *) sc_array_index (n_qids, i);
       neighbor_enc = *(int *) sc_array_index (n_encs, i);
       P4EST_ASSERT (0 <= neighbor_idx && neighbor_idx < (lq + gq));
-      quad = neighbor_idx < lq ?
-        p4est_mesh_get_quadrant (p4est, mesh, neighbor_idx) :
-        p4est_quadrant_array_index (&ghost->ghosts, neighbor_idx - lq);
+      quad =
+        neighbor_idx < lq ? p4est_mesh_get_quadrant (p4est,
+                                                     mesh, neighbor_idx)
+        : p4est_quadrant_array_index (&ghost->ghosts, neighbor_idx - lq);
       if ((curr_quad->level == quad->level)
           && (((0 <= neighbor_idx && neighbor_idx < lq)
                && (virtual_quads->virtual_qflags[neighbor_idx] != -1))
@@ -2551,12 +2531,14 @@ get_virtual_corner_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
  *                                Array must be empty and allocated for ints.
  */
 static int
-get_neighbor_virtual (p4est_t * p4est, p4est_ghost_t * ghost,
+get_neighbor_virtual (p4est_t * p4est,
+                      p4est_ghost_t * ghost,
                       p4est_mesh_t * mesh,
-                      p4est_virtual_t * virtual_quads,
-                      p4est_locidx_t qid, int vid, int dir,
-                      sc_array_t * n_encs, sc_array_t * n_qids,
-                      sc_array_t * n_vids)
+                      p4est_virtual_t *
+                      virtual_quads,
+                      p4est_locidx_t qid, int vid,
+                      int dir, sc_array_t * n_encs,
+                      sc_array_t * n_qids, sc_array_t * n_vids)
 {
   int                 temp_dir = 0;
   int                 limit;
@@ -2605,12 +2587,14 @@ get_neighbor_virtual (p4est_t * p4est, p4est_ghost_t * ghost,
 #endif /* P4_TO_P8 */
   /* inspect what to query */
   if (0 <= dir && dir < P4EST_FACES) {
-    get_virtual_face_neighbors (p4est, ghost, mesh, virtual_quads, qid, vid,
+    get_virtual_face_neighbors (p4est, ghost, mesh,
+                                virtual_quads, qid, vid,
                                 dir, n_encs, n_qids, n_vids);
   }
 #ifdef P4_TO_P8
   else if (P4EST_FACES <= dir && dir < P4EST_FACES + P8EST_EDGES) {
-    get_virtual_edge_neighbors (p4est, ghost, mesh, virtual_quads, qid, vid,
+    get_virtual_edge_neighbors (p4est, ghost, mesh,
+                                virtual_quads, qid, vid,
                                 dir, n_encs, n_qids, n_vids);
   }
   else
@@ -2620,9 +2604,11 @@ get_neighbor_virtual (p4est_t * p4est, p4est_ghost_t * ghost,
   else if (P4EST_FACES <= dir && dir < P4EST_FACES + P4EST_CHILDREN)
 #endif /* P4_TO_P8 */
   {
-    get_virtual_corner_neighbors (p4est, ghost, mesh, virtual_quads, qid,
-                                  vid, dir - P4EST_FACES - temp_dir, n_encs,
-                                  n_qids, n_vids);
+    get_virtual_corner_neighbors (p4est, ghost, mesh,
+                                  virtual_quads, qid,
+                                  vid,
+                                  dir - P4EST_FACES -
+                                  temp_dir, n_encs, n_qids, n_vids);
   }
   else {
     SC_ABORT_NOT_REACHED ();
@@ -2631,12 +2617,15 @@ get_neighbor_virtual (p4est_t * p4est, p4est_ghost_t * ghost,
 }
 
 int
-p4est_virtual_get_neighbor (p4est_t * p4est, p4est_ghost_t * ghost,
+p4est_virtual_get_neighbor (p4est_t * p4est,
+                            p4est_ghost_t * ghost,
                             p4est_mesh_t * mesh,
-                            p4est_virtual_t * virtual_quads,
-                            p4est_locidx_t qid, int vid, int dir,
-                            sc_array_t * n_encs, sc_array_t * n_qids,
-                            sc_array_t * n_vids)
+                            p4est_virtual_t *
+                            virtual_quads,
+                            p4est_locidx_t qid,
+                            int vid, int dir,
+                            sc_array_t * n_encs,
+                            sc_array_t * n_qids, sc_array_t * n_vids)
 {
   int                 dir_max;
   switch (virtual_quads->btype) {
@@ -2669,14 +2658,14 @@ p4est_virtual_get_neighbor (p4est_t * p4est, p4est_ghost_t * ghost,
   P4EST_ASSERT (0 == n_qids->elem_count
                 && n_qids->elem_size == sizeof (p4est_locidx_t));
   P4EST_ASSERT (0 == n_vids->elem_count && n_vids->elem_size == sizeof (int));
-
   /* delegate neighbor lookup depending on type of quadrant */
   if (-1 == vid) {
-    get_neighbor_real (p4est, ghost, mesh, virtual_quads, qid, dir, n_encs,
-                       n_qids, n_vids);
+    get_neighbor_real (p4est, ghost, mesh, virtual_quads,
+                       qid, dir, n_encs, n_qids, n_vids);
   }
   else {
-    get_neighbor_virtual (p4est, ghost, mesh, virtual_quads, qid, vid, dir,
+    get_neighbor_virtual (p4est, ghost, mesh,
+                          virtual_quads, qid, vid, dir,
                           n_encs, n_qids, n_vids);
   }
 
