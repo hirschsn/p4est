@@ -492,7 +492,7 @@ test_virtual_two_trees (p4est_t * p4est, p4est_connectivity_t * conn,
 {
   int                 conn_face_tree1, conn_face_tree2, orientation;
   int                 minLevel = 3;
-  p4est_connect_type_t btype = P4EST_CONNECT_FACE;
+  p4est_connect_type_t btype = P4EST_CONNECT_FULL;
   p4est_ghost_t      *ghost;
   p4est_mesh_t       *mesh;
   p4est_virtual_t    *virtual_quads;
