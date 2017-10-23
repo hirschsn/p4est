@@ -1311,6 +1311,7 @@ get_corner_hanging_face (p4est_t * p4est, p4est_ghost_t * ghost,
 #endif /* P4EST_ENABLE_DEBUG */
 
   int                 enc;
+  int                 offset;
   int                *int_ins;
 
   P4EST_ASSERT (n_vids->elem_count == 0);
@@ -1336,10 +1337,11 @@ get_corner_hanging_face (p4est_t * p4est, p4est_ghost_t * ghost,
 
   enc =
     p4est_connectivity_face_neighbor_corner (vid, dir, get_opposite (dir), 0);
-  int_ins = sc_array_push (n_encs);
-  *int_ins = enc;
   int_ins = sc_array_push (n_vids);
   *int_ins = enc;
+  set_xor_constants_corner (dir, &offset);
+  int_ins = sc_array_push (n_encs);
+  *int_ins = enc ^ offset;
 
   return 0;
 }
@@ -1457,7 +1459,21 @@ get_neighbor_real (p4est_t * p4est,
     }
     /* half size brick and inner */
     else if ((neighbor->level == current->level + 1)
-             && (n_encs->elem_count == P4EST_HALF)) {
+             &&
+             (((0 <= dir && dir < P4EST_FACES)
+               && (n_encs->elem_count == P4EST_HALF)) ||
+#ifdef P4_TO_P8
+              ((P4EST_FACES <= dir && dir < P4EST_FACES + P8EST_EDGES)
+               && (n_encs->elem_count == 2))
+              ||
+              ((P4EST_FACES + P8EST_EDGES <= dir
+                && dir < P4EST_FACES + P8EST_EDGES + P4EST_CHILDREN)
+               && (n_encs->elem_count == 1))
+#else /* P4_TO_P8 */
+              ((P4EST_FACES <= dir && dir < P4EST_FACES + P4EST_CHILDREN)
+               && (n_encs->elem_count == 1))
+#endif /* P4_TO_P8 */
+             )) {
       sc_array_truncate (n_encs);
       sc_array_truncate (n_qids);
       sc_array_destroy (n_quads);
@@ -2203,7 +2219,7 @@ get_virtual_corner_neighbors (p4est_t * p4est,
 #endif /* P4_TO_P8 */
   int                 c_corner, offset;
   P4EST_ASSERT (0 <= dir && dir < P4EST_CHILDREN);
-  tmp_dir = p4est_virtual_corner_neighbors_search_opts[dir][vid];
+  tmp_dir = p4est_virtual_corner_neighbors_search_opts[vid][dir];
   /** find internal neighbor of a virtual quadrant */
   if (tmp_dir < P4EST_CHILDREN) {
 #ifndef P4_TO_P8
@@ -2236,7 +2252,8 @@ get_virtual_corner_neighbors (p4est_t * p4est,
   /* external query */
   /* search respective face neighbor */
   if (P4EST_CHILDREN <= tmp_dir
-      && tmp_dir < (P4EST_FACES * (1 << (P4EST_DIM - 1)))) {
+      && tmp_dir <
+      (P4EST_CHILDREN + (P4EST_FACES * (1 << (P4EST_DIM - 1))))) {
     /* decode tmp_dir */
     tmp_dir -= P4EST_CHILDREN;
     tmp_subquad = tmp_dir / P4EST_FACES;
@@ -2253,14 +2270,12 @@ get_virtual_corner_neighbors (p4est_t * p4est,
       neighbor_enc = *(int *) sc_array_index (n_encs, tmp_subquad);
       P4EST_ASSERT (l_half_size_face <= neighbor_enc
                     && neighbor_enc < u_half_size_face);
-      decode_encoding (neighbor_enc, P4EST_FACES,
-                       l_same_size_face, u_same_size_face,
-                       l_double_size_face,
-                       u_double_size_face,
-                       l_half_size_face,
-                       u_double_size_face, &tmp_subindex,
-                       &tmp_ori, &tmp_entity);
-      P4EST_ASSERT (tmp_subindex == tmp_subquad);
+
+      decode_encoding (neighbor_enc, P4EST_FACES, l_same_size_face,
+                       u_same_size_face, l_double_size_face,
+                       u_double_size_face, l_half_size_face, u_half_size_face,
+                       &tmp_subindex, &tmp_ori, &tmp_entity);
+
       set_xor_constants_corner (tmp_dir, &offset);
       c_corner = dir ^ offset;
       neighbor_enc =
@@ -2289,28 +2304,36 @@ get_virtual_corner_neighbors (p4est_t * p4est,
                   && (-1 !=
                       virtual_quads->virtual_gflags[neighbor_idx - lq])))) {
 
-        decode_encoding (neighbor_enc, P4EST_FACES,
-                         l_same_size_face, u_same_size_face,
-                         l_double_size_face,
-                         u_double_size_face,
-                         l_half_size_face,
-                         u_double_size_face, &tmp_subindex,
-                         &tmp_ori, &tmp_entity);
+        decode_encoding (neighbor_enc, P4EST_FACES, l_same_size_face,
+                         u_same_size_face, l_double_size_face,
+                         u_double_size_face, l_half_size_face,
+                         u_half_size_face, &tmp_subindex, &tmp_ori,
+                         &tmp_entity);
         P4EST_ASSERT (tmp_subindex == -1);
+
         set_xor_constants_corner (tmp_dir, &offset);
         c_corner = dir ^ offset;
         neighbor_enc =
-          p4est_connectivity_face_neighbor_corner (c_corner,
-                                                   tmp_dir,
+          p4est_connectivity_face_neighbor_corner (c_corner, tmp_dir,
                                                    tmp_entity, tmp_ori);
-        neighbor_vid = neighbor_enc;
+        neighbor_vid =
+          p4est_connectivity_face_neighbor_face_corner (tmp_subquad, tmp_dir,
+                                                        tmp_entity, tmp_ori);
+        P4EST_ASSERT (0 <= neighbor_vid && neighbor_vid < P4EST_HALF);
+        neighbor_vid = p4est_face_corners[tmp_entity][neighbor_vid];
+        P4EST_ASSERT (0 <= neighbor_vid && neighbor_vid < P4EST_CHILDREN);
+
         sc_array_truncate (n_encs);
         sc_array_truncate (n_qids);
         insert_neighbor_elements (n_encs, n_qids, n_vids,
                                   neighbor_enc, neighbor_idx, neighbor_vid);
         return 0;
       }
-
+      else {
+        sc_array_truncate (n_encs);
+        sc_array_truncate (n_qids);
+        return 0;
+      }
     }
   }
 
@@ -2331,15 +2354,15 @@ get_virtual_corner_neighbors (p4est_t * p4est,
       neighbor_idx = *(int *) sc_array_index (n_qids, tmp_subquad);
       P4EST_ASSERT (0 <= neighbor_idx && neighbor_idx < (lq + gq));
       neighbor_enc = *(int *) sc_array_index (n_encs, tmp_subquad);
+
       P4EST_ASSERT (l_half_size_edge <= neighbor_enc
                     && neighbor_enc < u_half_size_edge);
-      decode_encoding (neighbor_enc, P8EST_EDGES,
-                       l_same_size_edge, u_same_size_edge,
-                       l_double_size_edge,
-                       u_double_size_edge,
-                       l_half_size_edge,
-                       u_double_size_edge, &tmp_subindex,
-                       &tmp_ori, &tmp_entity);
+
+      decode_encoding (neighbor_enc, P8EST_EDGES, l_same_size_edge,
+                       u_same_size_edge, l_double_size_edge,
+                       u_double_size_edge, l_half_size_edge,
+                       u_double_size_edge, &tmp_subindex, &tmp_ori,
+                       &tmp_entity);
       P4EST_ASSERT (tmp_subindex == tmp_subquad);
       neighbor_enc =
         p4est_connectivity_face_neighbor_corner (vid,
@@ -2368,13 +2391,11 @@ get_virtual_corner_neighbors (p4est_t * p4est,
                   && (-1 !=
                       virtual_quads->virtual_gflags[neighbor_idx - lq])))) {
 
-        decode_encoding (neighbor_enc, P4EST_FACES,
-                         l_same_size_face, u_same_size_face,
-                         l_double_size_face,
-                         u_double_size_face,
-                         l_half_size_face,
-                         u_double_size_face, &tmp_subindex,
-                         &tmp_ori, &tmp_entity);
+        decode_encoding (neighbor_enc, P4EST_FACES, l_same_size_face,
+                         u_same_size_face, l_double_size_face,
+                         u_double_size_face, l_half_size_face,
+                         u_double_size_face, &tmp_subindex, &tmp_ori,
+                         &tmp_entity);
         P4EST_ASSERT (tmp_subindex == -1);
         neighbor_enc =
           p4est_connectivity_face_neighbor_corner (vid,
@@ -2421,13 +2442,15 @@ get_virtual_corner_neighbors (p4est_t * p4est,
             || ((lq <= neighbor_idx && neighbor_idx < (lq + gq))
                 && (virtual_quads->virtual_gflags[neighbor_idx - lq] != -1)))) {
       neighbor_vid = neighbor_enc = dir ^ (P4EST_CHILDREN - 1);
+      insert_neighbor_elements (n_encs, n_qids, n_vids,
+                                neighbor_enc, neighbor_idx, neighbor_vid);
     }
     else if ((curr_quad->level + 1) == quad->level) {
       neighbor_vid = -1;
       neighbor_enc = dir ^ (P4EST_CHILDREN - 1);
+      insert_neighbor_elements (n_encs, n_qids, n_vids,
+                                neighbor_enc, neighbor_idx, neighbor_vid);
     }
-    insert_neighbor_elements (n_encs, n_qids, n_vids,
-                              neighbor_enc, neighbor_idx, neighbor_vid);
     return 0;
   }
 
