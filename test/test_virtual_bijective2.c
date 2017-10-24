@@ -593,7 +593,7 @@ test_virtual_multiple_trees_brick (p4est_t * p4est,
                                    int8_t periodic, sc_MPI_Comm mpicomm)
 {
   int                 minLevel = 2;
-  p4est_connect_type_t btype = P4EST_CONNECT_FACE;
+  p4est_connect_type_t btype = P4EST_CONNECT_FULL;
   p4est_ghost_t      *ghost;
   p4est_mesh_t       *mesh;
   p4est_virtual_t    *virtual_quads;
