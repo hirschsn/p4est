@@ -1359,7 +1359,7 @@ get_corner_hanging_face (p4est_t * p4est, p4est_ghost_t * ghost,
                    u_double_size, l_half_size, u_half_size, &n_subquad,
                    &n_orientation, &n_entity);
 
-  set_xor_constants_corner (dir, &offset);
+  set_xor_constants_corner (n_entity, &offset);
   enc = p4est_face_corners[n_entity][n_subquad];
   int_ins = sc_array_push (n_vids);
   *int_ins = enc ^ offset;
