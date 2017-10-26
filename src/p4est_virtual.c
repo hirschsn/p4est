@@ -1721,12 +1721,13 @@ get_neighbor_real (p4est_t * p4est, p4est_ghost_t * ghost,
                                 [*(int *) sc_array_index (n_vids, 1)];
         /* *INDENT-ON* */
 
-        P4EST_ASSERT (0 <= tmp_dir && tmp_dir < P8EST_EDGES);
-        p4est_mesh_get_neighbors (p4est, ghost, mesh, qid,
-                                  tmp_dir, n_quads, n_qids, n_encs);
+        P4EST_ASSERT (P4EST_FACES <= tmp_dir
+                      && tmp_dir < (P4EST_FACES + P8EST_EDGES));
+        p4est_mesh_get_neighbors (p4est, ghost, mesh, qid, tmp_dir, n_quads,
+                                  n_encs, n_qids);
         P4EST_ASSERT (1 <= n_quads->elem_count && n_quads->elem_count < 2);
-        /* As we are within a hanging quadrant by definition we must be within a
-         * single tree.  Thus, we want index 0 of the result array iff we are at
+
+        /* We want index 0 of the result array iff we are at
          * the smaller corner index of the respective edge else index 1. */
         if (dir - offset == p8est_edge_corners[tmp_dir - P4EST_FACES][0]) {
           decode_corner_index = 0;
@@ -1734,22 +1735,26 @@ get_neighbor_real (p4est_t * p4est, p4est_ghost_t * ghost,
         else {
           decode_corner_index = 1;
         }
-        facen_qid = *(int *) sc_array_index (n_qids, decode_corner_index);
-        n_enc = *(int *) sc_array_index (n_encs, decode_corner_index);
+        tmp_subindex = (1 == n_qids->elem_count) ? 0 : decode_corner_index;
+
+        facen_qid = *(int *) sc_array_index (n_qids, tmp_subindex);
+        n_enc = *(int *) sc_array_index (n_encs, tmp_subindex);
+
         /* Edge neighbor must be either same or double size.  If it were half
          * sized the forest would not be balanced. */
         P4EST_ASSERT (l_same_size_edge <= n_enc
                       && n_enc < u_double_size_edge);
+
         decode_encoding (n_enc, P8EST_EDGES, l_same_size_edge,
                          u_same_size_edge, l_double_size_edge,
                          u_double_size_edge, l_half_size_edge,
                          u_half_size_edge, &facen_subquad, &facen_ori,
                          &facen_entity);
-        P4EST_ASSERT (facen_subquad == decode_corner_index);
-        n_enc = p8est_edge_corners[facen_entity]
-          [decode_corner_index];
+
+        n_enc =
+          p8est_edge_corners[facen_entity][(1 + decode_corner_index) % 2];
         if (n_quads->elem_count == 1) {
-          n_vid = n_enc;
+          n_vid = p8est_edge_corners[facen_entity][decode_corner_index];
         }
         else {
           n_vid = -1;
