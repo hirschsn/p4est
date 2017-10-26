@@ -1085,6 +1085,21 @@ set_xor_constants_corner (int face_dir, int *offset)
   return 0;
 }
 
+static int
+set_xor_constants_corner_var (int face_dir, int *offset)
+{
+  int                 i;
+  *offset = 0;
+
+  for (i = 0; i < P4EST_DIM; ++i) {
+    if (face_dir / 2 == i) {
+      *offset += (1 << i);
+    }
+  }
+
+  return 0;
+}
+
 /** Decode encoding obtained in neighbor search.
  * \param[in]      enc           The normalized encoding, i.e. 0 based and no
  *                               longer containing ghost status, i.e. 0 <= enc
@@ -1402,14 +1417,13 @@ get_corner_hanging_face (p4est_t * p4est, p4est_ghost_t * ghost,
  *                                Array must be empty and allocated for ints.
  */
 static int
-get_neighbor_real (p4est_t * p4est,
-                   p4est_ghost_t * ghost,
-                   p4est_mesh_t * mesh,
-                   p4est_virtual_t * virtual_quads,
-                   p4est_locidx_t qid, int dir,
-                   sc_array_t * n_encs,
+get_neighbor_real (p4est_t * p4est, p4est_ghost_t * ghost,
+                   p4est_mesh_t * mesh, p4est_virtual_t * virtual_quads,
+                   p4est_locidx_t qid, int dir, sc_array_t * n_encs,
                    sc_array_t * n_qids, sc_array_t * n_vids)
 {
+  p4est_locidx_t      lq = mesh->local_num_quadrants;
+  p4est_locidx_t      gq = mesh->ghost_num_quadrants;
   int                 i, j;
   int                 offset = P4EST_FACES;
   int                 n_vid, n_enc;
@@ -1422,9 +1436,11 @@ get_neighbor_real (p4est_t * p4est,
   int                 query_dir_face, query_subidx_face;
   int                 decode_face;
   int                 facen_qid;
-  int                 facen_encoding;
+  int                 facen_enc;
   int                 facen_subquad, facen_ori, facen_entity;
   int                 tmp_qid, tmp_enc, tmp_subquad, tmp_entity, tmp_ori;
+  int                 tmp_subindex;
+  p4est_locidx_t     *qth_array;
   int                 same = -1;
   int                 larger = -1;
   int                 decode_corner_index, query_direction;
@@ -1577,26 +1593,43 @@ get_neighbor_real (p4est_t * p4est,
     if (((0 == same) && (1 == larger))
         || ((1 == same) && (0 == larger))) {
       /* obtain qid of double size neighbor */
+      tmp_dir = p8est_edge_faces[dir - P4EST_FACES][same];
       query_dir_face = p8est_edge_faces[dir - P4EST_FACES][larger];
       p4est_mesh_get_neighbors (p4est, ghost, mesh, qid,
                                 query_dir_face, NULL, n_encs, n_qids);
+
       /* by design we need to find a single neighbor */
       P4EST_ASSERT (1 == n_encs->elem_count);
       facen_qid = *(int *) sc_array_index (n_qids, 0);
+      P4EST_ASSERT (0 <= facen_qid && facen_qid < (lq + gq));
+      facen_enc = *(int *) sc_array_index (n_encs, 0);
 
       sc_array_truncate (n_encs);
       sc_array_truncate (n_qids);
-      /* obtain vid from face corner transformation:
-       * transform face corner index of same size sibling neighbor to large
-       * face and lookup corner index */
-      tmp_dir = p8est_edge_faces[dir - P4EST_FACES][same];
-      tmp_qid = mesh->quad_to_quad[P4EST_FACES * qid + tmp_dir];
-      tmp_enc = mesh->quad_to_face[P4EST_FACES * tmp_qid + query_dir_face];
-      decode_encoding (tmp_enc, P4EST_FACES, l_same_size_face,
+
+      /* calculate vid:
+       * obtain local face corner through transformation,
+       * translate to corner index,
+       * go in direction of sibling quadrant in local quadrant's face.
+       */
+      decode_encoding (facen_enc, P4EST_FACES, l_same_size_face,
                        u_same_size_face, l_double_size_face,
-                       u_double_size_face, l_half_size_face, u_half_size_face,
-                       &tmp_subquad, &tmp_ori, &tmp_entity);
-      n_vid = p4est_face_corners[tmp_entity][tmp_subquad];
+                       u_double_size_face, l_half_size_face,
+                       u_half_size_face, &tmp_subquad, &tmp_ori, &tmp_entity);
+      tmp_subindex =
+        p4est_connectivity_face_neighbor_face_corner (tmp_subquad,
+                                                      tmp_entity,
+                                                      query_dir_face,
+                                                      tmp_ori);
+      P4EST_ASSERT (0 <= tmp_subindex && tmp_subindex < P4EST_HALF);
+      tmp_subindex = p4est_face_corners[query_dir_face][tmp_subindex];
+      P4EST_ASSERT (0 <= tmp_subindex && tmp_subindex < P4EST_CHILDREN);
+      set_xor_constants_corner_var (tmp_dir, &corner_offset);
+      tmp_subindex = tmp_subindex ^ corner_offset;
+      P4EST_ASSERT (0 <= tmp_subindex && tmp_subindex < P4EST_CHILDREN);
+      n_vid =
+        p4est_connectivity_face_neighbor_corner (tmp_subindex, query_dir_face,
+                                                 tmp_entity, tmp_ori);
       P4EST_ASSERT (0 <= n_vid && n_vid < P4EST_CHILDREN);
 
       /* Obtain encoding:
@@ -1616,7 +1649,6 @@ get_neighbor_real (p4est_t * p4est,
                                                tmp_ori);
       set_xor_constants_edge (r_edge, tmp_entity, &edge_offset,
                               &corner_offset);
-
       r_corner =
         p8est_connectivity_edge_neighbor_corner (n_vid, r_edge,
                                                  dir - P4EST_FACES, 0);
@@ -1915,7 +1947,7 @@ get_virtual_edge_neighbors (p4est_t * p4est,
   int                 tmp_dir, tmp_subindex;
   int                 tmp_qid, tmp_vid, tmp_enc;
   int                 tmp_subquad, tmp_ori, tmp_entity;
-  int n_vid;
+  int                 n_vid;
   int                 r_edge, r_corner, c_corner;
   int                 opp_edge_offset, opp_corner_offset;
   int                 tmp_corner;
