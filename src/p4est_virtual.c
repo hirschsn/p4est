@@ -2620,9 +2620,8 @@ get_neighbor_virtual (p4est_t * p4est,
     get_virtual_edge_neighbors (p4est, ghost, mesh, virtual_quads, qid, vid,
                                 dir - P4EST_FACES, n_encs, n_qids, n_vids);
   }
-  else
-    if (P4EST_FACES + P8EST_EDGES <= dir
-        && dir < P4EST_FACES + P8EST_EDGES + P4EST_CHILDREN)
+  else if (P4EST_FACES + P8EST_EDGES <= dir
+           && dir < P4EST_FACES + P8EST_EDGES + P4EST_CHILDREN)
 #else /* P4_TO_P8 */
   else if (P4EST_FACES <= dir && dir < P4EST_FACES + P4EST_CHILDREN)
 #endif /* P4_TO_P8 */
