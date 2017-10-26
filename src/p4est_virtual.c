@@ -2421,7 +2421,7 @@ get_virtual_corner_neighbors (p4est_t * p4est,
                   && (-1 !=
                       virtual_quads->virtual_gflags[neighbor_idx - lq])))) {
 
-        decode_encoding (neighbor_enc, P4EST_FACES, l_same_size_face,
+        decode_encoding (neighbor_enc, P8EST_EDGES, l_same_size_face,
                          u_same_size_face, l_double_size_face,
                          u_double_size_face, l_half_size_face,
                          u_half_size_face, &tmp_subindex, &tmp_ori,
@@ -2447,6 +2447,8 @@ get_virtual_corner_neighbors (p4est_t * p4est,
       else {
         sc_array_truncate (n_encs);
         sc_array_truncate (n_qids);
+
+        return 0;
       }
     }
   }
