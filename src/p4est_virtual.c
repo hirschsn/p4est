@@ -2387,13 +2387,17 @@ get_virtual_corner_neighbors (p4est_t * p4est,
       decode_encoding (neighbor_enc, P8EST_EDGES, l_same_size_edge,
                        u_same_size_edge, l_double_size_edge,
                        u_double_size_edge, l_half_size_edge,
-                       u_double_size_edge, &tmp_subindex, &tmp_ori,
+                       u_half_size_edge, &tmp_subindex, &tmp_ori,
                        &tmp_entity);
-      P4EST_ASSERT (tmp_subindex == tmp_subquad);
+
+      /* We see the current quadrant through the opposite corner of the current
+       * edge.  We can obtain that corner e.g. by virtually flipping the edge.
+       */
       neighbor_enc =
-        p4est_connectivity_face_neighbor_corner (vid,
-                                                 tmp_dir,
-                                                 tmp_entity, tmp_ori);
+        p8est_connectivity_edge_neighbor_edge_corner (tmp_subquad,
+                                                      (tmp_ori + 1) % 2);
+      neighbor_enc = p8est_edge_corners[tmp_entity][neighbor_enc];
+
       neighbor_vid = -1;
       sc_array_truncate (n_encs);
       sc_array_truncate (n_qids);
@@ -2420,19 +2424,29 @@ get_virtual_corner_neighbors (p4est_t * p4est,
         decode_encoding (neighbor_enc, P4EST_FACES, l_same_size_face,
                          u_same_size_face, l_double_size_face,
                          u_double_size_face, l_half_size_face,
-                         u_double_size_face, &tmp_subindex, &tmp_ori,
+                         u_half_size_face, &tmp_subindex, &tmp_ori,
                          &tmp_entity);
-        P4EST_ASSERT (tmp_subindex == -1);
+        /* We see the current quadrant through the opposite corner of the current
+         * edge.  We can obtain that corner e.g. by virtually flipping the edge.
+         */
         neighbor_enc =
-          p4est_connectivity_face_neighbor_corner (vid,
-                                                   tmp_dir,
-                                                   tmp_entity, tmp_ori);
-        neighbor_vid = neighbor_enc;
+          p8est_connectivity_edge_neighbor_edge_corner (tmp_subquad,
+                                                        (tmp_ori + 1) % 2);
+        neighbor_enc = p8est_edge_corners[tmp_entity][neighbor_enc];
+
+        neighbor_vid =
+          p8est_connectivity_edge_neighbor_edge_corner (tmp_subquad,
+                                                        tmp_ori);
+        neighbor_vid = p8est_edge_corners[tmp_entity][neighbor_vid];
         sc_array_truncate (n_encs);
         sc_array_truncate (n_qids);
         insert_neighbor_elements (n_encs, n_qids, n_vids,
                                   neighbor_enc, neighbor_idx, neighbor_vid);
         return 0;
+      }
+      else {
+        sc_array_truncate (n_encs);
+        sc_array_truncate (n_qids);
       }
     }
   }
