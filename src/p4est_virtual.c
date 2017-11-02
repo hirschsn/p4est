@@ -1748,13 +1748,16 @@ get_neighbor_real (p4est_t * p4est, p4est_ghost_t * ghost,
         decode_encoding (n_enc, P8EST_EDGES, l_same_size_edge,
                          u_same_size_edge, l_double_size_edge,
                          u_double_size_edge, l_half_size_edge,
-                         u_half_size_edge, &facen_subquad, &facen_ori,
-                         &facen_entity);
+                         u_half_size_edge, &tmp_subquad, &tmp_ori,
+                         &tmp_entity);
 
         n_enc =
-          p8est_edge_corners[facen_entity][(1 + decode_corner_index) % 2];
+          p8est_edge_corners[tmp_entity][(1 + tmp_ori +
+                                          decode_corner_index) % 2];
         if (n_quads->elem_count == 1) {
-          n_vid = p8est_edge_corners[facen_entity][decode_corner_index];
+          n_vid =
+            p8est_edge_corners[tmp_entity][(tmp_ori +
+                                            decode_corner_index) % 2];
         }
         else {
           n_vid = -1;
