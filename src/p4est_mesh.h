@@ -42,7 +42,9 @@ SC_EXTERN_C_BEGIN;
  *
  * For each local quadrant, its tree number is stored in quad_to_tree.
  * The quad_to_tree array is NULL by default and can be enabled using
- * \ref p4est_mesh_new_ext.
+ * \ref p4est_mesh_new_ext.  For each ghost quadrant, its tree number is stored
+ * in ghost_to_tree.  The ghost_to_tree array is NULL by default and can be
+ * enabled using \ref p4est_mesh_new_ext.
  * For each ghost quadrant, its owner rank is stored in ghost_to_proc.
  * For each level, an array of local quadrant numbers is stored in quad_level.
  * For ghost quadrants the same information is stored in ghost_level.
@@ -111,6 +113,9 @@ typedef struct
   p4est_connect_type_t btype; /**< which neighbors are considered in mesh */
 
   p4est_topidx_t     *quad_to_tree;     /**< tree index for each local quad.
+                                               Is NULL by default, but may be
+                                             enabled by \ref p4est_mesh_new_ext. */
+  p4est_topidx_t     *ghost_to_tree;    /**< tree index for each ghost quad.
                                                Is NULL by default, but may be
                                              enabled by \ref p4est_mesh_new_ext. */
   int                *ghost_to_proc;    /**< processor for each ghost quad */

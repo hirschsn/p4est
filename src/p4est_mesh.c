@@ -1144,7 +1144,7 @@ p4est_mesh_memory_used (p4est_mesh_t * mesh)
   ngz = (size_t) mesh->ghost_num_quadrants;
 
   if (mesh->quad_to_tree != NULL) {
-    qtt_memory = sizeof (p4est_topidx_t) * lqz;
+    qtt_memory = sizeof (p4est_topidx_t) * (lqz + ngz);
   }
 
   if (mesh->quad_level != NULL) {
@@ -1211,7 +1211,7 @@ p4est_mesh_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
   int                 do_edge = 0;
 #endif /* P4_TO_P8 */
   int                 do_volume = 0;
-  int                 rank;
+  int                 rank, tree;
   p4est_locidx_t      lq, ng;
   p4est_locidx_t      jl;
   p4est_locidx_t     *insert;
@@ -1245,6 +1245,7 @@ p4est_mesh_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
   /* Optional map of tree index for each quadrant */
   if (compute_tree_index) {
     mesh->quad_to_tree = P4EST_ALLOC (p4est_topidx_t, lq);
+    mesh->ghost_to_tree = P4EST_ALLOC (p4est_topidx_t, ng);
   }
 
   /* allocate data structures */
@@ -1277,12 +1278,20 @@ p4est_mesh_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
 
   /* Populate ghost information */
   rank = 0;
+  tree = 0;
   for (jl = 0; jl < ng; ++jl) {
     while (ghost->proc_offsets[rank + 1] <= jl) {
       ++rank;
       P4EST_ASSERT (rank < p4est->mpisize);
     }
+    while (compute_tree_index && ghost->tree_offsets[tree + 1] <= jl) {
+      ++tree;
+      P4EST_ASSERT (tree < p4est->trees->elem_count);
+    }
     mesh->ghost_to_proc[jl] = rank;
+    if (compute_tree_index) {
+      mesh->ghost_to_tree[jl] = tree;
+    }
     if (compute_level_lists) {
       /* check level and push ghost to respective list in ghost_level */
       q = p4est_quadrant_array_index (&ghost->ghosts, jl);
@@ -1349,6 +1358,7 @@ p4est_mesh_destroy (p4est_mesh_t * mesh)
 
   if (mesh->quad_to_tree != NULL) {
     P4EST_FREE (mesh->quad_to_tree);
+    P4EST_FREE (mesh->ghost_to_tree);
   }
 
   if (mesh->quad_level != NULL) {
