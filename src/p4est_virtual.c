@@ -2305,8 +2305,7 @@ get_virtual_corner_neighbors (p4est_t * p4est,
       set_xor_constants_corner (tmp_dir, &offset);
       c_corner = dir ^ offset;
       neighbor_enc =
-        p4est_connectivity_face_neighbor_corner (c_corner,
-                                                 tmp_dir,
+        p4est_connectivity_face_neighbor_corner (c_corner, tmp_dir,
                                                  tmp_entity, tmp_ori);
       sc_array_truncate (n_encs);
       sc_array_truncate (n_qids);
