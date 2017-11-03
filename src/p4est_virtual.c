@@ -1704,7 +1704,6 @@ get_neighbor_real (p4est_t * p4est, p4est_ghost_t * ghost,
     /* one neighbor is a sibling: 2D or hanging across an edge */
     if (1 == n_siblings) {
 #ifndef P4_TO_P8
-      /* TODO function for faces */
       tmp_dir = *(int *) sc_array_index (n_vids, 0);
       sc_array_truncate (n_vids);
       get_corner_hanging_face (p4est, ghost, mesh, virtual_quads, qid,
@@ -1723,9 +1722,9 @@ get_neighbor_real (p4est_t * p4est, p4est_ghost_t * ghost,
 
         P4EST_ASSERT (P4EST_FACES <= tmp_dir
                       && tmp_dir < (P4EST_FACES + P8EST_EDGES));
-        p4est_mesh_get_neighbors (p4est, ghost, mesh, qid, tmp_dir, n_quads,
+        p4est_mesh_get_neighbors (p4est, ghost, mesh, qid, tmp_dir, NULL,
                                   n_encs, n_qids);
-        P4EST_ASSERT (1 <= n_quads->elem_count && n_quads->elem_count < 2);
+        P4EST_ASSERT (1 <= n_qids->elem_count && n_qids->elem_count < 2);
 
         /* We want index 0 of the result array iff we are at
          * the smaller corner index of the respective edge else index 1. */
@@ -1733,11 +1732,14 @@ get_neighbor_real (p4est_t * p4est, p4est_ghost_t * ghost,
           decode_corner_index = 0;
         }
         else {
+          P4EST_ASSERT (dir - offset ==
+                        p8est_edge_corners[tmp_dir - P4EST_FACES][1]);
           decode_corner_index = 1;
         }
         tmp_subindex = (1 == n_qids->elem_count) ? 0 : decode_corner_index;
 
-        facen_qid = *(int *) sc_array_index (n_qids, tmp_subindex);
+        tmp_qid = *(int *) sc_array_index (n_qids, tmp_subindex);
+        P4EST_ASSERT (0 <= tmp_qid && tmp_qid < (lq + gq));
         n_enc = *(int *) sc_array_index (n_encs, tmp_subindex);
 
         /* Edge neighbor must be either same or double size.  If it were half
@@ -1751,23 +1753,30 @@ get_neighbor_real (p4est_t * p4est, p4est_ghost_t * ghost,
                          u_half_size_edge, &tmp_subquad, &tmp_ori,
                          &tmp_entity);
 
-        n_enc =
-          p8est_edge_corners[tmp_entity][(1 + tmp_ori +
-                                          decode_corner_index) % 2];
-        if (n_quads->elem_count == 1) {
+        if (l_double_size_edge <= n_enc && n_enc < u_double_size_edge) {
+          P4EST_ASSERT (((0 <= tmp_qid && tmp_qid < lq)
+                         && -1 != virtual_quads->virtual_qflags[tmp_qid])
+                        || (lq <= tmp_qid && tmp_qid < (lq + gq)
+                            && -1 !=
+                            virtual_quads->virtual_gflags[tmp_qid - lq]));
           n_vid =
             p8est_edge_corners[tmp_entity][(tmp_ori +
                                             decode_corner_index) % 2];
         }
         else {
+          P4EST_ASSERT (l_same_size_edge <= n_enc
+                        && n_enc < u_same_size_edge);
           n_vid = -1;
         }
+        n_enc =
+          p8est_edge_corners[tmp_entity][(1 + tmp_ori +
+                                          decode_corner_index) % 2];
         sc_array_truncate (n_quads);
         sc_array_truncate (n_encs);
         sc_array_truncate (n_qids);
         sc_array_truncate (n_vids);
         insert_neighbor_elements (n_encs, n_qids, n_vids,
-                                  n_enc, facen_qid, n_vid);
+                                  n_enc, tmp_qid, n_vid);
       }
       else {
         sc_array_truncate (n_vids);
@@ -1776,7 +1785,6 @@ get_neighbor_real (p4est_t * p4est, p4est_ghost_t * ghost,
     }
     /* two neighbors are siblings: hanging across face */
     else if (2 == n_siblings) {
-      /* TODO function for faces */
       tmp_dir = *(int *) sc_array_index (n_vids, 0);
       sc_array_truncate (n_vids);
       get_corner_hanging_face (p4est, ghost, mesh, virtual_quads, qid,
