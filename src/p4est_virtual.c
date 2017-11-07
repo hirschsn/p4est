@@ -937,6 +937,163 @@ const int           p4est_virtual_corner_neighbors_search_opts[P4EST_CHILDREN]
 /* *INDENT-ON* */
 #endif /* P4_TO_P8 */
 
+/* -------------------------------------------------------------------------- */
+/* |                       Neighbor search: Bit Magic                       | */
+/* -------------------------------------------------------------------------- */
+typedef int         (*is_max_t) (const int);
+
+/** Determine if corner index is situated at x = 0 or x = 1 in local
+ * coordinates.
+ */
+static int
+is_max_x (const int c)
+{
+  P4EST_ASSERT (0 <= c && c < P4EST_CHILDREN);
+  return c & 1;
+}
+
+/** Determine if corner index is situated at y = 0 or y = 1 in local
+ * coordinates.
+ */
+static int
+is_max_y (const int c)
+{
+  P4EST_ASSERT (0 <= c && c < P4EST_CHILDREN);
+  return (is_max_x (c >> 1));
+}
+
+#ifdef P4_TO_P8
+/** Determine if corner index is situated at z = 0 or z = 1 in local
+ * coordinates.
+ */
+static int
+is_max_z (const int c)
+{
+  P4EST_ASSERT (0 <= c && c < P4EST_CHILDREN);
+  return (is_max_x (c >> 2));
+}
+#endif /* P4_TO_P8 */
+
+static is_max_t     is_max[P4EST_DIM] = {
+  is_max_x,
+  is_max_y
+#ifdef P4_TO_P8
+    , is_max_z
+#endif /* P4_TO_P8 */
+};
+
+#ifdef P4_TO_P8
+typedef int         (*mask_dir_t) (const int);
+
+/** Obtain index 0 .. 3 indicating the position of corner wrt. of its y and z
+ * components in Morton-order where y is incremented first.
+ */
+static int
+mask_x (const int c)
+{
+  P4EST_ASSERT (0 <= c && c < P4EST_CHILDREN);
+  return (c >> 1);
+}
+
+/** Obtain index 0 .. 3 indicating the position of corner wrt. of its x and z
+ * components in Morton-order where x is incremented first.
+ */
+static int
+mask_y (const int c)
+{
+  P4EST_ASSERT (0 <= c && c < P4EST_CHILDREN);
+  return (((c >> 1) & 2) + (c & 1));
+}
+
+/** Obtain index 0 .. 3 indicating the position of corner wrt. of its x and y
+ * components in Morton-order where x is incremented first.
+ */
+static int
+mask_z (const int c)
+{
+  P4EST_ASSERT (0 <= c && c < P4EST_CHILDREN);
+  return c & 3;
+}
+
+static mask_dir_t   masks[P4EST_DIM] = { mask_x, mask_y, mask_z };
+#endif /* P4_TO_P8 */
+
+/** Get face adjacent to the corner in a specific spatial direction.
+ * \param     [in]  c        Corner index 0 .. 2^(dim - 1).
+ * \param     [in]  d        Spatial direction:
+ *                              d = 0 .. x-axis
+ *                              d = 1 .. y-axis
+ *                              d = 2 .. z-axis (3D only)
+ * \return    face index     0 .. (2 * dim)
+ */
+static int
+get_adjacent_face (const int c, const int d)
+{
+  P4EST_ASSERT (0 <= c && c < P4EST_CHILDREN);
+  P4EST_ASSERT (0 <= d && d < P4EST_DIM);
+  return 2 * d + is_max[d] (c);
+}
+
+/** Get face opposite to the corner in a specific spatial direction.
+ * \param     [in]  c        Corner index 0 .. 2^(dim - 1).
+ * \param     [in]  d        Spatial direction:
+ *                              d = 0 .. x-axis
+ *                              d = 1 .. y-axis
+ *                              d = 2 .. z-axis (3D only)
+ * \return    face index     0 .. (2 * dim)
+ */
+static int
+get_opposite_face (const int c, const int d)
+{
+  int                 oc = c ^ (P4EST_CHILDREN - 1);
+  return get_adjacent_face (oc, d);
+}
+
+#ifdef P4_TO_P8
+/** Get edge index adjacent to corner parallel to a specific spatial direction.
+ * \param     [in]  c        Corner index 0 .. 2^(dim - 1).
+ * \param     [in]  d        Spatial direction:
+ *                              d = 0 .. x-axis
+ *                              d = 1 .. y-axis
+ *                              d = 2 .. z-axis
+ * \return    edge index     0 .. 12
+ */
+static int
+get_adjacent_edge (const int c, const int d)
+{
+  P4EST_ASSERT (0 <= c && c < P4EST_CHILDREN);
+  P4EST_ASSERT (0 <= d && d < P4EST_DIM);
+  return 4 * d + masks[d] (c);
+}
+
+/** Get edge index opposite to corner parallel to a specific spatial direction.
+ * \param     [in]  c        Corner index 0 .. 2^(dim - 1).
+ * \param     [in]  d        Spatial direction:
+ *                              d = 0 .. x-axis
+ *                              d = 1 .. y-axis
+ *                              d = 2 .. z-axis
+ * \return    edge index     0 .. 12
+ */
+static int
+get_opposite_edge (const int c, const int d)
+{
+  int                 oc = c ^ (P4EST_CHILDREN - 1);
+  return get_adjacent_edge (oc, d);
+}
+
+static int         *
+get_hanging_edges (const int c, const int d)
+{
+  int                 he[P4EST_DIM][2] = { {1, 2}, {5, 6}, {9, 10} };
+  int                 i;
+  int                *res = he[d];
+  for (i = 0; i < 2; ++i) {
+    res[i] = res[i] ^ masks[d] (c);
+  }
+  return res;
+}
+#endif /* P4_TO_P8 */
+
 /** insert one element into result arrays
  * \param     [out] n_encs   Result array of int containing the neighbor's
  *                           encoding.
@@ -2445,8 +2602,7 @@ get_virtual_corner_neighbors (p4est_t * p4est,
         neighbor_enc = p8est_edge_corners[tmp_entity][neighbor_enc];
 
         neighbor_vid =
-          p8est_connectivity_edge_neighbor_edge_corner (tmp_subquad,
-                                                        tmp_ori);
+          p8est_connectivity_edge_neighbor_edge_corner (tmp_subquad, tmp_ori);
         neighbor_vid = p8est_edge_corners[tmp_entity][neighbor_vid];
         sc_array_truncate (n_encs);
         sc_array_truncate (n_qids);
