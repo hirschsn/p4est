@@ -1856,6 +1856,12 @@ get_neighbor_real (p4est_t * p4est, p4est_ghost_t * ghost,
      * We abuse n_vids array as a temporal storage to store those directions
      * that are not adjacent to sibling neighbors.
      */
+    /* TODO:
+     * Change this:
+     * (dir - offset) XOR vid yields corner type. Depending on this, we know if
+     * the quadrant is hanging via edge or via face in 3D.  The above results
+     * even yields the new search direction.
+     */
     for (i = 0; i < P4EST_DIM; ++i) {
       tmp_dir = p4est_corner_faces[dir - offset][i];
       p4est_mesh_get_neighbors (p4est, ghost, mesh, qid,
@@ -2428,6 +2434,11 @@ get_virtual_corner_neighbors (p4est_t * p4est,
 #endif /* P4_TO_P8 */
   int                 c_corner, offset;
   P4EST_ASSERT (0 <= dir && dir < P4EST_CHILDREN);
+
+  /* TODO:
+   * Change this according to ideas sketched above in get_neighbor_real.
+   * Find the respective corner type and alter query accordlingly
+   */
   tmp_dir = p4est_virtual_corner_neighbors_search_opts[vid][dir];
   /** find internal neighbor of a virtual quadrant */
   if (tmp_dir < P4EST_CHILDREN) {
