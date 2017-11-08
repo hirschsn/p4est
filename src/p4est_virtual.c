@@ -1081,16 +1081,28 @@ get_opposite_edge (const int c, const int d)
   return get_adjacent_edge (oc, d);
 }
 
-static int         *
-get_hanging_edges (const int c, const int d)
+/** Get both potentially hanging edge indices given a corner index and a
+ * spatial direction.
+ * \param [in]      c        Corner index.
+ * \param [in]      d        Spatial direction.
+ * \param     [out] hanging_edge_indices  Pointer to a container for two ints
+ *                                        that will be populated with both
+ *                                        potentially hanging edges parallel to
+ *                                        d.
+ */
+static void
+get_hanging_edges (const int c, const int d, int *hanging_edge_indices[2])
 {
   int                 he[P4EST_DIM][2] = { {1, 2}, {5, 6}, {9, 10} };
   int                 i;
-  int                *res = he[d];
+
+  /* Copy value for v0 two result array */
+  memcpy (hanging_edge_indices, he[d], sizeof (int) * 2);
+
+  /* Transform to given corner index*/
   for (i = 0; i < 2; ++i) {
-    res[i] = res[i] ^ masks[d] (c);
+    *hanging_edge_indices[i] = *hanging_edge_indices[i] ^ masks[d] (c);
   }
-  return res;
 }
 #endif /* P4_TO_P8 */
 
@@ -1106,10 +1118,9 @@ get_hanging_edges (const int c, const int d)
  * \param [in]      n_vid    Element that will be appended to vids.
  */
 static int
-insert_neighbor_elements (sc_array_t * n_encs,
-                          sc_array_t * n_qids,
-                          sc_array_t * n_vids,
-                          int8_t n_enc, p4est_locidx_t n_qid, int n_vid)
+insert_neighbor_elements (sc_array_t * n_encs, sc_array_t * n_qids,
+                          sc_array_t * n_vids, int8_t n_enc,
+                          p4est_locidx_t n_qid, int n_vid)
 {
   int                *insert_int;
 
@@ -1829,6 +1840,10 @@ get_neighbor_real (p4est_t * p4est, p4est_ghost_t * ghost,
   if ((0 == n_encs->elem_count)
       && (offset <= dir && dir < (offset + P4EST_CHILDREN))
       && (mesh->quad_to_corner[P4EST_CHILDREN * qid + (dir - offset)] == -1)) {
+    /* TODO: change this to an XOR that yields the respective corner type and
+     * decide what to query.
+     * This avoids counting siblings.
+     */
     /* To get correct search direction:
      * In 2D this is simple, because it is similar to the edge case above:
      * We will find one same size neighbor that is part of a family and one
