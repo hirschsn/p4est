@@ -2076,8 +2076,9 @@ get_neighbor_real (p4est_t * p4est, p4est_ghost_t * ghost,
         ++i;
       }
       tmp_dir = get_adjacent_edge (sid, i);
-      get_corner_hanging_edge (p4est, ghost, mesh, virtual_quads, qid, sid,
-                               dir, tmp_dir, n_encs, n_qids, n_vids);
+      get_corner_hanging_edge (p4est, ghost, mesh, virtual_quads, qid,
+                               dir - offset, tmp_dir, sid, n_encs, n_qids,
+                               n_vids);
     }
 #endif /* P4_TO_P8 */
     else {
