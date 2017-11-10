@@ -1108,11 +1108,11 @@ get_hanging_edges (const int c, const int d, int *hanging_edge_indices[2])
 
 /** insert one element into result arrays
  * \param     [out] n_encs   Result array of int containing the neighbor's
- *                           encoding.
+ *                           encoding.  If NULL n_enc is ignored.
  * \param     [out] n_qids   Result array of int containing the neighbor's
- *                           quadrant index.
+ *                           quadrant index.  If NULL n_qid is ignored.
  * \param     [out] n_vids   Result array of int containing the neighbor's
- *                           virtual index.
+ *                           virtual index.  If NULL n_vid is ignored.
  * \param [in]      n_enc    Element that will be appended to n_encs.
  * \param [in]      n_qid    Element that will be appended to qids.
  * \param [in]      n_vid    Element that will be appended to vids.
