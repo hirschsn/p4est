@@ -1585,12 +1585,15 @@ get_corner_hanging_edge (p4est_t * p4est, p4est_ghost_t * ghost,
 {
   p4est_locidx_t      lq = mesh->local_num_quadrants;
   p4est_locidx_t      gq = mesh->ghost_num_quadrants;
-  p4est_quadrant_t   *n, c_n;
-  int search_dir;
+  int                 search_dir;
   int                 tmp_subquad, tmp_ori, tmp_entity;
-  int                 n_enc, n_qid, n_vid;
+  p4est_quadrant_t   *n, c_n;
+  p4est_topidx_t      n_tree_id, n_rank;
+  p4est_tree_t       *n_tree;
+  int                 n_sibling, n_enc, n_qid, n_vid;
   int                 l_same_size_edge, u_same_size_edge, l_double_size_edge;
   int                 u_double_size_edge, l_half_size_edge, u_half_size_edge;
+  p4est_qcoord_t      inc;
 
   P4EST_ASSERT (0 <= e_dir && e_dir < P8EST_EDGES);
   l_half_size_edge = -24;
@@ -1600,6 +1603,10 @@ get_corner_hanging_edge (p4est_t * p4est, p4est_ghost_t * ghost,
 
   p4est_mesh_get_neighbors (p4est, ghost, mesh, qid, e_dir + P4EST_FACES,
                             NULL, n_encs, n_qids);
+  /* domain boundary: no edge neighbor present */
+  if (0 == n_encs->elem_count) {
+    return 0;
+  }
   /* FIXME: This assertion is only valid in brick-like scenarios.  However, as
    * we are already part of a hanging corner, there can only be same or double
    * size neighbors.  In case of half-size neighbors the forest would not be
@@ -1616,11 +1623,16 @@ get_corner_hanging_edge (p4est_t * p4est, p4est_ghost_t * ghost,
                    u_same_size_edge, l_double_size_edge,
                    u_double_size_edge, l_half_size_edge,
                    u_half_size_edge, &tmp_subquad, &tmp_ori, &tmp_entity);
+  sc_array_truncate (n_encs);
 
   /* same size neighbor */
   if (l_same_size_edge <= n_enc && n_enc < u_same_size_edge) {
-    /* find correct quadrant first.
+    sc_array_truncate (n_qids);
+    /* Find correct quadrant first.  The direction in which to search is found
+     * by searching for the opposite face in the direction of the edge.
      */
+    search_dir = get_opposite_face (sid, tmp_entity / 4);
+
     /* If neighboring quadrant is local, search the respective neighbor via
      * p4est_mesh in the respective direction.
      * Else, we have to construct the respective quadrant, determine its owner
@@ -1628,7 +1640,73 @@ get_corner_hanging_edge (p4est_t * p4est, p4est_ghost_t * ghost,
      * perform a binary search among the local quadrants of that tree.  If the
      * owner rank is a different rank we search among the ghosts owned by that
      * rank. */
-
+    if (0 <= n_qid && n_qid < lq) {
+      p4est_mesh_get_neighbors (p4est, ghost, mesh, n_qid, search_dir, NULL,
+                                NULL, n_qids);
+      P4EST_ASSERT (n_qids->elem_count == 1);
+    }
+    else {
+      /* construct quadrant */
+      n = p4est_quadrant_array_index (&ghost->ghosts, (n_qid - lq));
+      n_sibling = p4est_quadrant_child_id (n);
+      memcpy (&c_n, n, sizeof (p4est_quadrant_t));
+      inc = P4EST_QUADRANT_LEN (n->level);
+      switch (search_dir) {
+      case 0:
+        if (is_max[search_dir] (n_sibling)) {
+          c_n.x = c_n.x & (~inc);
+        }
+        else {
+          c_n.x = c_n.x | inc;
+        }
+        break;
+      case 1:
+        if (is_max[search_dir] (n_sibling)) {
+          c_n.y = c_n.y & (~inc);
+        }
+        else {
+          c_n.y = c_n.y | inc;
+        }
+        break;
+      case 2:
+        if (is_max[search_dir] (n_sibling)) {
+          c_n.z = c_n.z & (~inc);
+        }
+        else {
+          c_n.z = c_n.z | inc;
+        }
+        break;
+      default:
+        SC_ABORT_NOT_REACHED ();
+      }
+      /* determine its tree id */
+      n_tree_id = mesh->ghost_to_tree[n_qid - lq];
+      n_rank = p4est_quadrant_find_owner (p4est, n_tree_id, -1, &c_n);
+      P4EST_ASSERT (0 <= n_rank && n_rank < p4est->mpisize);
+      if (n_rank == p4est->mpirank) {
+        n_tree = p4est_tree_array_index (p4est->trees, n_tree_id);
+        n_qid =
+          sc_array_bsearch (&n_tree->quadrants, &c_n,
+                            p4est_quadrant_compare) +
+          n_tree->quadrants_offset;
+        P4EST_ASSERT (0 <= n_qid && n_qid < lq);
+      }
+      else {
+        n_qid = p4est_ghost_bsearch (ghost, n_rank, n_tree_id, &c_n);
+        P4EST_ASSERT (0 <= n_qid && n_qid < gq);
+        n_qid += lq;
+      }
+    }
+    n_vid = -1;
+    n_enc = p8est_connectivity_edge_neighbor_corner (sid, e_dir, tmp_entity,
+                                                     tmp_ori);
+    P4EST_ASSERT (0 <= n_enc && n_enc < P4EST_CHILDREN);
+    if (n_qids->elem_count) {
+      insert_neighbor_elements (n_encs, NULL, n_vids, n_enc, -1, n_vid);
+    }
+    else {
+      insert_neighbor_elements (n_encs, n_qids, n_vids, n_enc, n_qid, n_vid);
+    }
   }
   /* double size neighbor:
    * We have obtained the correct quadrant index.  This leaves calculating the
@@ -1649,6 +1727,7 @@ get_corner_hanging_edge (p4est_t * p4est, p4est_ghost_t * ghost,
     P4EST_ASSERT (0 <= n_vid && n_vid < P4EST_CHILDREN);
     n_enc = n_vid ^ (1 << (tmp_entity / 4));
     P4EST_ASSERT (0 <= n_enc && n_enc < P4EST_CHILDREN);
+    insert_neighbor_elements (n_encs, NULL, n_vids, n_enc, -1, n_vid);
   }
   else {
     SC_ABORT_NOT_REACHED ();
