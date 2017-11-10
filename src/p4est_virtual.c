@@ -2801,9 +2801,7 @@ get_virtual_corner_neighbors (p4est_t * p4est,
     }
     return 0;
   }
-
-  /* Anything else.  This must be a tree-boundary, i.e. by definition hanging
-   * quadrants do not occur here. */
+  /* Anything else.  This must be a tree-boundary. */
   else
     if ((lq + gq) <= neighbor_idx
         && neighbor_idx < (lq + gq + mesh->local_num_corners)) {
