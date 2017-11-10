@@ -2054,7 +2054,7 @@ get_neighbor_real (p4est_t * p4est, p4est_ghost_t * ghost,
       ) {
       i = 0;
       while (corner_type_norm != 1) {
-        corner_type_norm >> 1;
+        corner_type_norm = corner_type_norm >> 1;
         ++i;
       }
       tmp_dir = get_adjacent_face (sid, i);
@@ -2072,7 +2072,7 @@ get_neighbor_real (p4est_t * p4est, p4est_ghost_t * ghost,
              || (corner_type_norm == 6)) {
       i = 0;
       while (corner_type != 1) {
-        corner_type >> 1;
+        corner_type = corner_type >> 1;
         ++i;
       }
       tmp_dir = get_adjacent_edge (sid, i);
