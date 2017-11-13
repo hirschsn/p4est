@@ -289,6 +289,32 @@ p4est_locidx_t      p8est_mesh_get_neighbors (p8est_t * p4est,
                                               sc_array_t * neighboring_encs,
                                               sc_array_t * neighboring_qids);
 
+/** Decode encoding obtained in neighbor search
+ * \param[in]      enc           The normalized encoding, i.e. 0 based and no
+ *                               longer containing ghost status, i.e. 0 <= enc
+ * \param[in]      n_entities    Number of faces, edges, or corners, depending
+ *                               on the direction the neighbor has been looked
+ *                               up.
+ * \param[in]      l_same_size   Lower bound for encoding a neighbor of same
+ *                               size.
+ * \param[in]      u_same_size   Upper bound for encoding a neighbor of same
+ *                               size.
+ * \param[in]      l_double_size Lower bound for encoding a neighbor of double
+ *                               size.
+ * \param[in]      u_double_size Upper bound for encoding a neighbor of double
+ *                               size.
+ * \param[in]      l_half_size   Lower bound for encoding a neighbor of half
+ *                               size.
+ * \param[in]      u_half_size   Upper bound for encoding a neighbor of half
+ *                               size.
+ */
+void
+p8est_mesh_decode_encoding (int enc, int n_entities, int l_same_size,
+                            int u_same_size, int l_double_size,
+                            int u_double_size, int l_half_size,
+                            int u_half_size, int *subquad, int *orientation,
+                            int *entity);
+
 /** Find a quadrant based on its cumulative number in the local forest.
  * If the quad_to_tree field of the mesh structure exists, this is O(1).
  * Otherwise, we perform a binary search over the processor-local trees.
