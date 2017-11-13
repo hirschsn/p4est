@@ -1645,7 +1645,10 @@ get_corner_hanging_edge (p4est_t * p4est, p4est_ghost_t * ghost,
     /* Find correct quadrant first.  The direction in which to search is found
      * by searching for the opposite face in the direction of the edge.
      */
-    search_dir = get_opposite_face (sid, tmp_entity / 4);
+    n = n_qid < lq ? p4est_mesh_get_quadrant (p4est, mesh, n_qid) :
+      p4est_quadrant_array_index (&ghost->ghosts, (n_qid - lq));
+    n_sibling = p4est_quadrant_child_id (n);
+    search_dir = get_opposite_face (n_sibling, tmp_entity / 4);
 
     /* If neighboring quadrant is local, search the respective neighbor via
      * p4est_mesh in the respective direction.
@@ -1661,10 +1664,10 @@ get_corner_hanging_edge (p4est_t * p4est, p4est_ghost_t * ghost,
     }
     else {
       /* construct quadrant */
-      n = p4est_quadrant_array_index (&ghost->ghosts, (n_qid - lq));
-      n_sibling = p4est_quadrant_child_id (n);
       memcpy (&c_n, n, sizeof (p4est_quadrant_t));
       inc = P4EST_QUADRANT_LEN (n->level);
+      /* now we only want to distinguish x, y, and z direction */
+      search_dir *= 0.5;
       switch (search_dir) {
       case 0:
         if (is_max[search_dir] (n_sibling)) {
