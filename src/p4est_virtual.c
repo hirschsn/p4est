@@ -1238,8 +1238,14 @@ set_xor_constants_edge (int edge_dir, int face_dir, int *edge_offset,
 }
 #endif /* P4_TO_P8 */
 
+/** Go in the direction of a diagonally opposite corner within a face.
+ * \param [in]      face_dir    Face index 0 .. P4EST_FACES
+ * \param     [out] offset      XOR operand for obtaining respective corner
+ *                              index in diagonally opposite direction within
+ *                              the current face within the current quadrant.
+ */
 static int
-set_xor_constants_corner (int face_dir, int *offset)
+set_xor_constants_corner_inside (int face_dir, int *offset)
 {
   int                 i;
   *offset = 0;
@@ -1253,8 +1259,15 @@ set_xor_constants_corner (int face_dir, int *offset)
   return 0;
 }
 
+#ifdef P4_TO_P8
+/** Go ortogonal to the face.  Works for 2D as well but is unused.
+ * \param [in]      face_dir    Face index 0 .. P4EST_FACES
+ * \param     [out] offset      XOR operand for obtaining respective corner
+ *                              index in direction normal to the face within
+ *                              quadrant.
+ */
 static int
-set_xor_constants_corner_var (int face_dir, int *offset)
+set_xor_constants_corner_orth (int face_dir, int *offset)
 {
   int                 i;
   *offset = 0;
@@ -1267,6 +1280,7 @@ set_xor_constants_corner_var (int face_dir, int *offset)
 
   return 0;
 }
+#endif /* P4_TO_P8 */
 
 /** Decode encoding obtained in neighbor search.
  * \param[in]      enc           The normalized encoding, i.e. 0 based and no
@@ -1551,7 +1565,7 @@ get_corner_hanging_face (p4est_t * p4est, p4est_ghost_t * ghost,
                    u_double_size, l_half_size, u_half_size, &n_subquad,
                    &n_orientation, &n_entity);
 
-  set_xor_constants_corner (n_entity, &offset);
+  set_xor_constants_corner_inside (n_entity, &offset);
   enc = p4est_face_corners[n_entity][n_subquad];
   int_ins = sc_array_push (n_vids);
   *int_ins = enc ^ offset;
@@ -1972,7 +1986,7 @@ get_neighbor_real (p4est_t * p4est, p4est_ghost_t * ghost,
       P4EST_ASSERT (0 <= tmp_subindex && tmp_subindex < P4EST_HALF);
       tmp_subindex = p4est_face_corners[query_dir_face][tmp_subindex];
       P4EST_ASSERT (0 <= tmp_subindex && tmp_subindex < P4EST_CHILDREN);
-      set_xor_constants_corner_var (tmp_dir, &corner_offset);
+      set_xor_constants_corner_orth (tmp_dir, &corner_offset);
       tmp_subindex = tmp_subindex ^ corner_offset;
       P4EST_ASSERT (0 <= tmp_subindex && tmp_subindex < P4EST_CHILDREN);
       n_vid =
@@ -2610,7 +2624,7 @@ get_virtual_corner_neighbors (p4est_t * p4est,
                        u_double_size_face, l_half_size_face, u_half_size_face,
                        &tmp_subindex, &tmp_ori, &tmp_entity);
 
-      set_xor_constants_corner (tmp_dir, &offset);
+      set_xor_constants_corner_inside (tmp_dir, &offset);
       c_corner = dir ^ offset;
       neighbor_enc =
         p4est_connectivity_face_neighbor_corner (c_corner, tmp_dir,
@@ -2644,7 +2658,8 @@ get_virtual_corner_neighbors (p4est_t * p4est,
                          &tmp_entity);
         P4EST_ASSERT (tmp_subindex == -1);
 
-        set_xor_constants_corner (tmp_dir, &offset);
+        set_xor_constants_corner_inside (tmp_dir, &offset);
+
         c_corner = dir ^ offset;
         neighbor_enc =
           p4est_connectivity_face_neighbor_corner (c_corner, tmp_dir,
