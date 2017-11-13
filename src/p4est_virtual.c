@@ -1034,7 +1034,9 @@ get_adjacent_face (const int c, const int d)
   return 2 * d + is_max[d] (c);
 }
 
+#ifdef P4_TO_P8
 /** Get face opposite to the corner in a specific spatial direction.
+ * CAUTION: Works for 2D as well but is unused
  * \param     [in]  c        Corner index 0 .. 2^(dim - 1).
  * \param     [in]  d        Spatial direction:
  *                              d = 0 .. x-axis
@@ -1049,7 +1051,6 @@ get_opposite_face (const int c, const int d)
   return get_adjacent_face (oc, d);
 }
 
-#ifdef P4_TO_P8
 /** Get edge index adjacent to corner parallel to a specific spatial direction.
  * \param     [in]  c        Corner index 0 .. 2^(dim - 1).
  * \param     [in]  d        Spatial direction:
@@ -1066,6 +1067,8 @@ get_adjacent_edge (const int c, const int d)
   return 4 * d + masks[d] (c);
 }
 
+#if 0
+/* CAUTION: Functions are working fine but unused */
 /** Get edge index opposite to corner parallel to a specific spatial direction.
  * \param     [in]  c        Corner index 0 .. 2^(dim - 1).
  * \param     [in]  d        Spatial direction:
@@ -1104,6 +1107,7 @@ get_hanging_edges (const int c, const int d, int *hanging_edge_indices[2])
     *hanging_edge_indices[i] = *hanging_edge_indices[i] ^ masks[d] (c);
   }
 }
+#endif /* 0 */
 #endif /* P4_TO_P8 */
 
 /** insert one element into result arrays
@@ -1791,9 +1795,7 @@ get_neighbor_real (p4est_t * p4est, p4est_ghost_t * ghost,
                    p4est_locidx_t qid, int dir, sc_array_t * n_encs,
                    sc_array_t * n_qids, sc_array_t * n_vids)
 {
-  p4est_locidx_t      lq = mesh->local_num_quadrants;
-  p4est_locidx_t      gq = mesh->ghost_num_quadrants;
-  int                 i, j;
+  int                 i;
   int                 offset = P4EST_FACES;
   int                 n_vid, n_enc;
   int                *int_ins;
@@ -1803,38 +1805,24 @@ get_neighbor_real (p4est_t * p4est, p4est_ghost_t * ghost,
   int                 sid;
   int                 corner_type, corner_type_norm;
 #ifdef P4_TO_P8
-  int                 query_dir_face, query_subidx_face;
-  int                 decode_face;
+  int                 query_dir_face;
   int                 tmp_qid, tmp_enc, tmp_subquad, tmp_entity, tmp_ori;
   int                 tmp_subindex;
-  p4est_locidx_t     *qth_array;
   int                 same = -1;
   int                 larger = -1;
-  int                 decode_corner_index, query_direction;
   int                 edge_offset, corner_offset;
-  int                 r_edge, r_corner, tmp_corner, c_corner;
-  int                 opp_edge_offset, opp_corner_offset;
+  int                 r_edge, r_corner, c_corner;
 #endif /* P4_TO_P8 */
+#ifdef P4_TO_P8
+  p4est_locidx_t      lq = mesh->local_num_quadrants;
+  p4est_locidx_t      gq = mesh->ghost_num_quadrants;
   int                 l_same_size_face, u_same_size_face;
   int                 l_double_size_face, u_double_size_face;
   int                 l_half_size_face, u_half_size_face;
-#ifdef P4_TO_P8
-  int                 l_same_size_edge, u_same_size_edge;
-  int                 l_double_size_edge, u_double_size_edge;
-  int                 l_half_size_edge, u_half_size_edge;
   l_half_size_face = -24;
   u_half_size_face = l_same_size_face = 0;
   u_same_size_face = l_double_size_face = 24;
   u_double_size_face = 120;
-  l_half_size_edge = -24;
-  u_half_size_edge = l_same_size_edge = 0;
-  u_same_size_edge = l_double_size_edge = 24;
-  u_double_size_edge = 72;
-#else /* P4_TO_P8 */
-  l_half_size_face = -8;
-  u_half_size_face = l_same_size_face = 0;
-  u_same_size_face = l_double_size_face = 8;
-  u_double_size_face = 24;
 #endif /* P4_TO_P8 */
   current = p4est_mesh_get_quadrant (p4est, mesh, qid);
   /* perform regular neighbor search */
@@ -1938,7 +1926,6 @@ get_neighbor_real (p4est_t * p4est, p4est_ghost_t * ghost,
       else if (l_double_size_face <= mesh->quad_to_face[tmp_dir]
                && mesh->quad_to_face[tmp_dir] < u_double_size_face) {
         larger = i;
-        decode_face = p8est_edge_faces[dir - P4EST_FACES][larger];
         decode_encoding (mesh->quad_to_face[tmp_dir], P4EST_FACES,
                          l_same_size_face, u_same_size_face,
                          l_double_size_face, u_double_size_face,
@@ -2279,7 +2266,7 @@ get_virtual_edge_neighbors (p4est_t * p4est,
   p4est_locidx_t      neighbor_idx, neighbor_enc;
   int                 neighbor_vid;
   int                 tmp_dir, tmp_subindex;
-  int                 tmp_qid, tmp_vid, tmp_enc;
+  int                 tmp_qid, tmp_enc;
   int                 tmp_subquad, tmp_ori, tmp_entity;
   int                 n_vid;
   int                 r_edge, r_corner, c_corner;
