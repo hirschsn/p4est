@@ -27,6 +27,7 @@
 
 #include <p4est_ghost.h>
 #include <p4est_mesh.h>
+#include <p4est_virtual.h>
 
 SC_EXTERN_C_BEGIN;
 
@@ -92,8 +93,8 @@ p4est_meshiter_parallelboundary_t;
  * adjacent to the parallel process boundary.
  * Note that these flags may be combined in an arbitrary way.
  *
- * neighbor_ids and neighbor_enc are sc_arrays used to store the results of
- * neighborsearch queries.
+ * neighbor_qid, neighbor_vid, and neighbor_enc are sc_arrays used to store the
+ * results of neighborsearch queries.
  *
  * The internal status of the mesh-based iterator consists of 3 parts:
  *
@@ -156,13 +157,13 @@ typedef struct
   p4est_t            *p4est;
   p4est_ghost_t      *ghost;
   p4est_mesh_t       *mesh;
+  p4est_virtual_t    *virtual_quads;
   p4est_connect_type_t btype;
 
   /** internal neighbor access operators */
-  sc_array_t          neighbor_ids;
-                            /**< array of type int */
-  sc_array_t          neighbor_enc;
-                            /**< array of type int */
+  sc_array_t          neighbor_qids;       /**< array of type int */
+  sc_array_t          neighbor_vids;       /**< array of type int */
+  sc_array_t          neighbor_encs;        /**< array of type int */
 
   /** flags to include or exclude certain cells */
   int8_t              traverse_ghosts;     /**< traverse ghosts:
@@ -193,18 +194,18 @@ typedef struct
   /** current */
   p4est_locidx_t      current_index;
   p4est_locidx_t      current_qid;
-  int8_t              current_vid;
-  int8_t              current_subquad;
-  int8_t              current_is_ghost;
+  int                 current_vid;
+  int                 current_subquad;
+  int                 current_is_ghost;
 
   /** current neighbor, only set when current not ghost */
   p4est_locidx_t      neighbor_qid;
-  int8_t              neighbor_is_ghost;
-  int8_t              neighbor_direction;
-  int8_t              neighbor_entity_index;
-  int8_t              neighbor_orientation;
-  int8_t              neighbor_vid;
-  int8_t              neighbor_subquad;
+  int                 neighbor_is_ghost;
+  int                 neighbor_direction;
+  int                 neighbor_entity_index;
+  int                 neighbor_orientation;
+  int                 neighbor_vid;
+  int                 neighbor_subquad;
 }
 p4est_meshiter_t;
 
@@ -213,13 +214,20 @@ p4est_meshiter_t;
  *                     codimension of neighbors.
  * \param [in] ghost   The ghost layer created from the provided p4est.
  * \param [in] mesh    The mesh created from the provided p4est and ghost.
- *                     CAUTION: mesh must contain quad_level fields
+ *                     CAUTION: mesh must contain quad_level and ghost_level
+ *                              fields.
+ * \param [in] virtual_quads  Virtual quadrants at refinement boundaries.
+ *                            CAUTION: virtual_quadrants must contain
+ *                                     virtual_qlevels and virtual_glevels
+ *                                     fields.
  * \param [in] level   The level to be traversed
  * \param [in] btype   Defines the highest codimension of neighbors
  */
 p4est_meshiter_t   *p4est_meshiter_new (p4est_t * p4est,
                                         p4est_ghost_t * ghost,
-                                        p4est_mesh_t * mesh, int level,
+                                        p4est_mesh_t * mesh,
+                                        p4est_virtual_t * virtual_quads,
+                                        int level,
                                         p4est_connect_type_t btype);
 
 /** Free the allocated mesh_iter struct

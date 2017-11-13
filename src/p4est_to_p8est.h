@@ -57,6 +57,7 @@
 #define P4EST_LAST_OFFSET               P8EST_LAST_OFFSET
 #define P4EST_QUADRANT_INIT             P8EST_QUADRANT_INIT
 #define P4EST_LEAF_IS_FIRST_IN_TREE     P8EST_LEAF_IS_FIRST_IN_TREE
+#define P4EST_MESHITER_DONE             P8EST_MESHITER_DONE
 
 /* redefine enums */
 #define P4EST_CONNECT_FACE              P8EST_CONNECT_FACE
@@ -71,6 +72,15 @@
 #define P4EST_WRAP_NONE                 P8EST_WRAP_NONE
 #define P4EST_WRAP_REFINE               P8EST_WRAP_REFINE
 #define P4EST_WRAP_COARSEN              P8EST_WRAP_COARSEN
+#define P4EST_TRAVERSE_LOCAL            P8EST_TRAVERSE_LOCAL
+#define P4EST_TRAVERSE_LOCALGHOST       P8EST_TRAVERSE_LOCALGHOST
+#define P4EST_TRAVERSE_GHOST            P8EST_TRAVERSE_GHOST
+#define P4EST_TRAVERSE_REAL             P8EST_TRAVERSE_REAL
+#define P4EST_TRAVERSE_REALVIRTUAL      P8EST_TRAVERSE_REALVIRTUAL
+#define P4EST_TRAVERSE_VIRTUAL          P8EST_TRAVERSE_VIRTUAL
+#define P4EST_TRAVERSE_PARBOUNDINNER    P8EST_TRAVERSE_PARBOUNDINNER
+#define P4EST_TRAVERSE_PARALLEL_BOUNDARY  P8EST_TRAVERSE_PARALLEL_BOUNDARY
+#define P4EST_TRAVERSE_INNER            P8EST_TRAVERSE_INNER
 
 /* redefine types */
 #ifdef P4EST_BACKWARD_DEALII
@@ -112,6 +122,10 @@
 #define p4est_transfer_context_t        p8est_transfer_context_t
 #define p4est_mesh_t                    p8est_mesh_t
 #define p4est_mesh_face_neighbor_t      p8est_mesh_face_neighbor_t
+#define p4est_meshiter_t                p8est_meshiter_t
+#define p4est_meshiter_localghost_t     p8est_meshiter_localghost_t
+#define p4est_meshiter_realvirt_t       p8est_meshiter_realvirt_t
+#define p4est_meshiter_parallelboundary_t p8est_meshiter_parallelboundary_t
 #define p4est_wrap_t                    p8est_wrap_t
 #define p4est_wrap_leaf_t               p8est_wrap_leaf_t
 #define p4est_wrap_flags_t              p8est_wrap_flags_t
@@ -191,6 +205,7 @@
 #define p4est_replace_t                 p8est_replace_t
 #define p4est_new_ext                   p8est_new_ext
 #define p4est_mesh_new_ext              p8est_mesh_new_ext
+#define p4est_meshiter_new_ext          p8est_meshiter_new_ext
 #define p4est_copy_ext                  p8est_copy_ext
 #define p4est_refine_ext                p8est_refine_ext
 #define p4est_coarsen_ext               p8est_coarsen_ext
@@ -423,6 +438,17 @@
 #define p4est_mesh_face_neighbor_init2  p8est_mesh_face_neighbor_init2
 #define p4est_mesh_face_neighbor_next   p8est_mesh_face_neighbor_next
 #define p4est_mesh_face_neighbor_data   p8est_mesh_face_neighbor_data
+
+/* functions in p4est_meshiter */
+#define p4est_meshiter_new              p8est_meshiter_new
+#define p4est_meshiter_destroy          p8est_meshiter_destroy
+#define p4est_meshiter_next             p8est_meshiter_next
+#define p4est_meshiter_set_neighbor_quad_info \
+        p8est_meshiter_set_neighbor_quad_info
+#define p4est_meshiter_get_current_storage_id \
+        p8est_meshiter_get_current_storage_id
+#define p4est_meshiter_get_neighbor_storage_id \
+        p8est_meshiter_get_neighbor_storage_id
 
 /* functions in p4est_balance */
 #define p4est_balance_seeds_face        p8est_balance_seeds_face

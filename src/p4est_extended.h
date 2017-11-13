@@ -43,6 +43,7 @@
 #include <p4est.h>
 #include <p4est_mesh.h>
 #include <p4est_virtual.h>
+#include <p4est_meshiter.h>
 #include <p4est_iterate.h>
 #include <p4est_lnodes.h>
 
@@ -172,6 +173,43 @@ p4est_virtual_t    *p4est_virtual_new_ext (p4est_t * p4est,
                                            p4est_mesh_t * mesh,
                                            p4est_connect_type_t btype,
                                            int compute_level_lists);
+
+/** Create a new mesh iterator from a given forest, ghost, and mesh
+ * \param [in] p4est   A forest that is 2:1 balanced up to the specified
+ *                     codimension of neighbors.
+ * \param [in] ghost   The ghost layer created from the provided p4est.
+ * \param [in] mesh    The mesh created from the provided p4est and ghost.
+ *                     CAUTION: mesh must contain quad_level and ghost_level
+ *                              fields.
+ * \param [in] virtual_quads  Virtual quadrants at refinement boundaries.
+ *                            CAUTION: virtual_quadrants must contain
+ *                                     virtual_qlevels and virtual_glevels
+ *                                     fields.
+ * \param [in] level   The level to be traversed
+ * \param [in] btype   Defines the highest codimension of neighbors
+ * \param [in] traverse_ghosts  A value of 0 indicates to omit ghost quadrants,
+                                1 leads to traversing ghosts after the local
+                                quadrants have been visited.
+ * \param [in] traverse_virtuals  0 if virtuals should be ignored, 1 if they
+                                  are included. Virtual quadrants are included
+                                  according to the Morton-index of their parent
+ * \param [in] traverse_parallel_boundary  0 if all quadrants of the level set
+ *                                         should be traversed, 1 to visit those
+ *                                         along the parallel boundary, 2 for
+ *                                         inner quadrants.
+ */
+p4est_meshiter_t   *p4est_meshiter_new_ext (p4est_t * p4est,
+                                            p4est_ghost_t * ghost,
+                                            p4est_mesh_t * mesh,
+                                            p4est_virtual_t * virtual_quads,
+                                            int level,
+                                            p4est_connect_type_t btype,
+                                            p4est_meshiter_localghost_t
+                                            traverse_ghosts,
+                                            p4est_meshiter_realvirt_t
+                                            traverse_virtuals,
+                                            p4est_meshiter_parallelboundary_t
+                                            traverse_parallel_boundary);
 
 /** Make a deep copy of a p4est.
  * The connectivity is not duplicated.

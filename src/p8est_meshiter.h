@@ -27,6 +27,7 @@
 
 #include <p8est_ghost.h>
 #include <p8est_mesh.h>
+#include <p8est_virtual.h>
 
 SC_EXTERN_C_BEGIN;
 
@@ -92,8 +93,8 @@ p8est_meshiter_parallelboundary_t;
  * adjacent to the parallel process boundary.
  * Note that these flags may be combined in an arbitrary way.
  *
- * neighbor_ids and neighbor_enc are sc_arrays used to store the results of
- * neighborsearch queries.
+ * neighbor_qid, neighbor_vid, and neighbor_enc are sc_arrays used to store the
+ * results of neighborsearch queries.
  *
  * The internal status of the mesh-based iterator consists of 3 parts:
  *
@@ -157,12 +158,14 @@ typedef struct
   p8est_t            *p4est;
   p8est_ghost_t      *ghost;
   p8est_mesh_t       *mesh;
+  p8est_virtual_t    *virtual_quads;
   p8est_connect_type_t btype;
 
   /** internal neighbor access operators */
-  sc_array_t          neighbor_ids;
+  sc_array_t          neighbor_qids;
+  sc_array_t          neighbor_vids;
                             /**< array of type int */
-  sc_array_t          neighbor_enc;
+  sc_array_t          neighbor_encs;
                             /**< array of type int */
 
   /** flags to include or exclude certain cells */
@@ -194,18 +197,18 @@ typedef struct
   /** current */
   p4est_locidx_t      current_index;
   p4est_locidx_t      current_qid;
-  int8_t              current_vid;
-  int8_t              current_subquad;
-  int8_t              current_is_ghost;
+  int                 current_vid;
+  int                 current_subquad;
+  int                 current_is_ghost;
 
   /** current neighbor, only set when current not ghost */
   p4est_locidx_t      neighbor_qid;
-  int8_t              neighbor_is_ghost;
-  int8_t              neighbor_direction;
-  int8_t              neighbor_entity_index;
-  int8_t              neighbor_orientation;
-  int8_t              neighbor_vid;
-  int8_t              neighbor_subquad;
+  int                 neighbor_is_ghost;
+  int                 neighbor_direction;
+  int                 neighbor_entity_index;
+  int                 neighbor_orientation;
+  int                 neighbor_vid;
+  int                 neighbor_subquad;
 }
 p8est_meshiter_t;
 
@@ -220,7 +223,9 @@ p8est_meshiter_t;
  */
 p8est_meshiter_t   *p8est_meshiter_new (p8est_t * p4est,
                                         p8est_ghost_t * ghost,
-                                        p8est_mesh_t * mesh, int level,
+                                        p8est_mesh_t * mesh,
+                                        p8est_virtual_t * virtual_quads,
+                                        int level,
                                         p8est_connect_type_t btype);
 
 /** Free the allocated mesh_iter struct
