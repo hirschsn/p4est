@@ -182,90 +182,6 @@ encode_direction (int dir, int entity)
   }
 }
 
-/** Decode encoding obtained in neighbor search
- * \param[in]      enc           The normalized encoding, i.e. 0 based and no
- *                               longer containing ghost status, i.e. 0 <= enc
- * \param[in]      n_entities    Number of faces, edges, or corners, depending
- *                               on the direction the neighbor has been looked
- *                               up.
- * \param[in]      l_same_size   Lower bound for encoding a neighbor of same
- *                               size.
- * \param[in]      u_same_size   Upper bound for encoding a neighbor of same
- *                               size.
- * \param[in]      l_double_size Lower bound for encoding a neighbor of double
- *                               size.
- * \param[in]      u_double_size Upper bound for encoding a neighbor of double
- *                               size.
- * \param[in]      l_half_size   Lower bound for encoding a neighbor of half
- *                               size.
- * \param[in]      u_half_size   Upper bound for encoding a neighbor of half
- *                               size.
- */
-static int
-decode_encoding (int enc, int n_entities, int l_same_size,
-                 int u_same_size, int l_double_size,
-                 int u_double_size, int l_half_size, int u_half_size,
-                 int *subquad, int *orientation, int *entity)
-{
-  int8_t              upper_bnd;
-  int                 e = enc;
-
-  P4EST_ASSERT ((u_half_size == l_same_size) && (l_same_size == 0));
-  P4EST_ASSERT (u_same_size == l_double_size);
-  P4EST_ASSERT (l_half_size <= l_same_size);
-  P4EST_ASSERT (l_same_size < l_double_size);
-
-#ifdef P4EST_ENABLE_DEBUG
-  if (n_entities == P4EST_FACES) {
-    upper_bnd = P4EST_HALF;
-  }
-#ifdef P4_TO_P8
-  else if (n_entities == P8EST_EDGES) {
-    upper_bnd = 2;
-  }
-#endif /* P4_TO_P8 */
-  else if (n_entities == P4EST_CHILDREN) {
-    upper_bnd = 1;
-  }
-  else {
-    SC_ABORT_NOT_REACHED ();
-  }
-#endif /* P4EST_ENABLE_DEBUG */
-
-  if (l_same_size <= enc && enc < u_same_size) {
-    *orientation = enc / n_entities;
-    *entity = enc % n_entities;
-    *subquad = -1;
-  }
-  else if (l_double_size <= enc && enc < u_double_size) {
-    e -= l_double_size;
-    *subquad = e / l_double_size;
-    e -= (l_double_size * *subquad);
-    *orientation = e / n_entities;
-    *entity = e % n_entities;
-
-#ifdef P4EST_ENABLE_DEBUG
-    P4EST_ASSERT (0 <= *subquad && *subquad < upper_bnd);
-#endif /* P4EST_ENABLE_DEBUG */
-  }
-  else if (l_half_size <= enc && enc < u_half_size) {
-    e -= l_half_size;
-    *orientation = e / n_entities;
-    *entity = e % n_entities;
-    *subquad = -1;
-  }
-  else {
-    SC_ABORT_NOT_REACHED ();
-  }
-
-#ifdef P4EST_ENABLE_DEBUG
-  P4EST_ASSERT (0 <= *orientation && *orientation < upper_bnd);
-#endif /* P4EST_ENABLE_DEBUG */
-  P4EST_ASSERT (0 <= *entity && *entity < n_entities);
-
-  return 0;
-}
-
 void
 check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
                    p4est_mesh_t * mesh, p4est_virtual_t * virtual_quads)
@@ -397,10 +313,13 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
               continue;
             }
 
-            decode_encoding (neighbor_enc, n_neighbor_entities, l_same_size,
-                             u_same_size, l_double_size, u_double_size,
-                             l_half_size, u_half_size, &neighbor_subquad,
-                             &neighbor_orientation, &neighbor_entity);
+            p4est_mesh_decode_encoding (neighbor_enc, n_neighbor_entities,
+                                        l_same_size, u_same_size,
+                                        l_double_size, u_double_size,
+                                        l_half_size, u_half_size,
+                                        &neighbor_subquad,
+                                        &neighbor_orientation,
+                                        &neighbor_entity);
             iinv = encode_direction (neighbor_entity, entity);
 
             sc_array_truncate (found_encs);
@@ -420,10 +339,12 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
             found_vid = *(int *) sc_array_index (found_vids, 0);
             found_enc = *(int *) sc_array_index (found_encs, 0);
 
-            decode_encoding (found_enc, n_neighbor_entities, l_same_size,
-                             u_same_size, l_double_size, u_double_size,
-                             l_half_size, u_half_size, &found_subquad,
-                             &found_orientation, &found_entity);
+            p4est_mesh_decode_encoding (found_enc, n_neighbor_entities,
+                                        l_same_size, u_same_size,
+                                        l_double_size, u_double_size,
+                                        l_half_size, u_half_size,
+                                        &found_subquad, &found_orientation,
+                                        &found_entity);
 
             /** the original quadrant must have the same size */
             P4EST_ASSERT (found_qid == norm_quad);
