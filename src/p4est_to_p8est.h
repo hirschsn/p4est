@@ -416,6 +416,7 @@
 #define p4est_mesh_destroy              p8est_mesh_destroy
 #define p4est_mesh_get_quadrant         p8est_mesh_get_quadrant
 #define p4est_mesh_get_neighbors        p8est_mesh_get_neighbors
+#define p4est_mesh_decode_encoding      p8est_mesh_decode_encoding
 #define p4est_mesh_quadrant_cumulative  p8est_mesh_quadrant_cumulative
 #define p4est_mesh_face_neighbor_init   p8est_mesh_face_neighbor_init
 #define p4est_mesh_face_neighbor_init2  p8est_mesh_face_neighbor_init2
