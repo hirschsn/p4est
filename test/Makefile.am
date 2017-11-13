@@ -18,6 +18,7 @@ p4est_test_programs += \
         test/p4est_test_virtual_neighbor_matrix \
         test/p4est_test_virtual_ghost_send_virts \
         test/p4est_test_virtual_bijective \
+        test/p4est_test_meshiter_bijective \
         test/p4est_test_conn_transformation \
         test/p4est_test_iterate test/p4est_test_lnodes \
         test/p4est_test_search test/p4est_test_brick \
@@ -47,6 +48,7 @@ p4est_test_programs += \
         test/p8est_test_virtual_neighbor_matrix \
         test/p8est_test_virtual_ghost_send_virts \
         test/p8est_test_virtual_bijective \
+        test/p8est_test_meshiter_bijective \
         test/p8est_test_conn_transformation \
         test/p8est_test_iterate test/p8est_test_lnodes \
         test/p8est_test_search test/p8est_test_brick \
@@ -96,6 +98,7 @@ test_p4est_test_virtual_position_SOURCES = test/test_pos_virtual2.c
 test_p4est_test_virtual_neighbor_matrix_SOURCES = test/test_virtual_neighbor_matrix2.c
 test_p4est_test_virtual_ghost_send_virts_SOURCES = test/test_virtual_ghost_send_virts2.c
 test_p4est_test_virtual_bijective_SOURCES = test/test_virtual_bijective2.c
+test_p4est_test_meshiter_bijective_SOURCES = test/test_meshiter_bijective2.c
 test_p4est_test_conn_transformation_SOURCES = test/test_conn_transformation2.c
 test_p4est_test_iterate_SOURCES = test/test_iterate2.c
 test_p4est_test_lnodes_SOURCES = test/test_lnodes2.c
@@ -140,6 +143,7 @@ test_p8est_test_virtual_position_SOURCES = test/test_pos_virtual3.c
 test_p8est_test_virtual_neighbor_matrix_SOURCES = test/test_virtual_neighbor_matrix3.c
 test_p8est_test_virtual_ghost_send_virts_SOURCES = test/test_virtual_ghost_send_virts3.c
 test_p8est_test_virtual_bijective_SOURCES = test/test_virtual_bijective3.c
+test_p8est_test_meshiter_bijective_SOURCES = test/test_meshiter_bijective3.c
 test_p8est_test_conn_transformation_SOURCES = test/test_conn_transformation3.c
 test_p8est_test_brick_SOURCES = test/test_brick3.c
 test_p8est_test_iterate_SOURCES = test/test_iterate3.c
@@ -193,6 +197,7 @@ LINT_CSOURCES += \
         $(test_p4est_test_virtual_neighbor_matrix_SOURCES) \
         $(test_p4est_test_virtual_ghost_send_virts_SOURCES) \
         $(test_p4est_test_virtual_bijective_SOURCES) \
+        $(test_p4est_test_meshiter_bijective_SOURCES) \
         $(test_p4est_test_conn_transformation_SOURCES) \
         $(test_p4est_test_iterate_SOURCES) \
         $(test_p4est_test_lnodes_SOURCES) \
@@ -228,6 +233,7 @@ LINT_CSOURCES += \
         $(test_p8est_test_virtual_neighbor_matrix_SOURCES) \
         $(test_p8est_test_virtual_ghost_send_virts_SOURCES) \
         $(test_p8est_test_virtual_bijective_SOURCES) \
+        $(test_p8est_test_meshiter_bijective_SOURCES) \
         $(test_p8est_test_conn_transformation_SOURCES) \
         $(test_p8est_test_brick_SOURCES) \
         $(test_p8est_test_iterate_SOURCES) \
