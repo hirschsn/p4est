@@ -21,8 +21,8 @@ p4est_test_programs += \
         test/p4est_test_meshiter_bijective \
         test/p4est_test_conn_transformation \
         test/p4est_test_iterate test/p4est_test_lnodes \
-        test/p4est_test_search test/p4est_test_brick \
-	test/p4est_test_complete_subtree \
+        test/p4est_test_search test/p4est_test_lower_upper_bound \
+        test/p4est_test_brick test/p4est_test_complete_subtree \
         test/p4est_test_partition_corr \
         test/p4est_test_conn_complete test/p4est_test_balance_seeds \
         test/p4est_test_wrap test/p4est_test_replace test/p4est_test_join \
@@ -51,7 +51,8 @@ p4est_test_programs += \
         test/p8est_test_meshiter_bijective \
         test/p8est_test_conn_transformation \
         test/p8est_test_iterate test/p8est_test_lnodes \
-        test/p8est_test_search test/p8est_test_brick \
+        test/p8est_test_search test/p8est_test_lower_upper_bound \
+        test/p8est_test_brick \
         test/p8est_test_partition_corr \
         test/p8est_test_conn_complete test/p8est_test_balance_seeds \
         test/p8est_test_wrap test/p8est_test_replace test/p8est_test_join \
@@ -103,6 +104,7 @@ test_p4est_test_conn_transformation_SOURCES = test/test_conn_transformation2.c
 test_p4est_test_iterate_SOURCES = test/test_iterate2.c
 test_p4est_test_lnodes_SOURCES = test/test_lnodes2.c
 test_p4est_test_search_SOURCES = test/test_search2.c
+test_p4est_test_lower_upper_bound_SOURCES = test/test_lower_upper_bound2.c
 test_p4est_test_complete_subtree_SOURCES = test/test_complete_subtree.c
 test_p4est_test_brick_SOURCES = test/test_brick2.c
 test_p4est_test_partition_corr_SOURCES = test/test_partition_corr2.c
@@ -149,6 +151,7 @@ test_p8est_test_brick_SOURCES = test/test_brick3.c
 test_p8est_test_iterate_SOURCES = test/test_iterate3.c
 test_p8est_test_lnodes_SOURCES = test/test_lnodes3.c
 test_p8est_test_search_SOURCES = test/test_search3.c
+test_p8est_test_lower_upper_bound_SOURCES = test/test_lower_upper_bound3.c
 test_p8est_test_partition_corr_SOURCES = test/test_partition_corr3.c
 test_p8est_test_conn_complete_SOURCES = test/test_conn_complete3.c
 test_p8est_test_balance_seeds_SOURCES = test/test_balance_seeds3.c
@@ -202,6 +205,7 @@ LINT_CSOURCES += \
         $(test_p4est_test_iterate_SOURCES) \
         $(test_p4est_test_lnodes_SOURCES) \
         $(test_p4est_test_search_SOURCES) \
+        $(test_p4est_test_lower_upper_bound_SOURCES) \
         $(test_p4est_test_complete_subtree_SOURCES) \
         $(test_p4est_test_brick_SOURCES) \
         $(test_p4est_test_partition_corr_SOURCES) \
@@ -239,6 +243,7 @@ LINT_CSOURCES += \
         $(test_p8est_test_iterate_SOURCES) \
         $(test_p8est_test_lnodes_SOURCES) \
         $(test_p8est_test_search_SOURCES) \
+        $(test_p8est_test_lower_upper_bound_SOURCES) \
         $(test_p8est_test_reorder_SOURCES) \
         $(test_p8est_test_partition_corr_SOURCES) \
         $(test_p8est_test_balance_seeds_SOURCES) \

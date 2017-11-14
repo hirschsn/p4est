@@ -120,6 +120,7 @@
 #define p4est_search_query_t            p8est_search_query_t
 #define p4est_transfer_comm_t           p8est_transfer_comm_t
 #define p4est_transfer_context_t        p8est_transfer_context_t
+#define p4est_traverse_query_t          p8est_traverse_query_t
 #define p4est_mesh_t                    p8est_mesh_t
 #define p4est_mesh_face_neighbor_t      p8est_mesh_face_neighbor_t
 #define p4est_meshiter_t                p8est_meshiter_t
@@ -143,9 +144,9 @@
 #define P4EST_DATA_UNINITIALIZED        P8EST_DATA_UNINITIALIZED
 
 /* functions in p4est_connectivity */
-#define p4est_connectivity_face_neighbor_face_corner    \
+#define p4est_connectivity_face_neighbor_face_corner        \
         p8est_connectivity_face_neighbor_face_corner
-#define p4est_connectivity_face_neighbor_corner         \
+#define p4est_connectivity_face_neighbor_corner     \
         p8est_connectivity_face_neighbor_corner
 #define p4est_connectivity_memory_used  p8est_connectivity_memory_used
 #define p4est_connectivity_new          p8est_connectivity_new
@@ -236,6 +237,7 @@
 #define p4est_quadrant_compare          p8est_quadrant_compare
 #define p4est_quadrant_disjoint         p8est_quadrant_disjoint
 #define p4est_quadrant_compare_piggy    p8est_quadrant_compare_piggy
+#define p4est_quadrant_disjoint_piggy   p8est_quadrant_disjoint_piggy
 #define p4est_quadrant_compare_local_num p8est_quadrant_compare_local_num
 #define p4est_quadrant_equal_fn         p8est_quadrant_equal_fn
 #define p4est_quadrant_hash_fn          p8est_quadrant_hash_fn
@@ -299,10 +301,17 @@
 /* functions in p4est_search */
 #define p4est_find_lower_bound          p8est_find_lower_bound
 #define p4est_find_higher_bound         p8est_find_higher_bound
+#define p4est_find_lower_bound_overlap  p8est_find_lower_bound_overlap
+#define p4est_find_higher_bound_overlap p8est_find_higher_bound_overlap
+#define p4est_find_lower_bound_overlap_piggy \
+        p8est_find_lower_bound_overlap_piggy
+#define p4est_find_higher_bound_overlap_piggy \
+        p8est_find_higher_bound_overlap_piggy
 #define p4est_find_quadrant_cumulative  p8est_find_quadrant_cumulative
 #define p4est_split_array               p8est_split_array
 #define p4est_find_range_boundaries     p8est_find_range_boundaries
 #define p4est_search                    p8est_search
+#define p4est_traverse                  p8est_traverse
 
 /* functions in p4est_algorithms */
 #define p4est_quadrant_init_data        p8est_quadrant_init_data

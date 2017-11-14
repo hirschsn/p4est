@@ -175,6 +175,24 @@ p4est_quadrant_compare_piggy (const void *v1, const void *v2)
 }
 
 int
+p4est_quadrant_disjoint_piggy (const void *v1, const void *v2)
+{
+  const p4est_quadrant_t *q1 = (const p4est_quadrant_t *) v1;
+  const p4est_quadrant_t *q2 = (const p4est_quadrant_t *) v2;
+
+  /* expect non-negative tree information */
+  /* *INDENT-OFF* horrible indent bug */
+  const p4est_topidx_t diff =
+    q1->p.which_tree - q2->p.which_tree;        /* same type */
+  /* *INDENT-ON* */
+
+  P4EST_ASSERT (q1->p.which_tree >= 0 && q2->p.which_tree >= 0);
+
+  return (diff == 0) ?
+    p4est_quadrant_disjoint (v1, v2) : ((diff < 0) ? -1 : 1);
+}
+
+int
 p4est_quadrant_compare_local_num (const void *v1, const void *v2)
 {
   const p4est_quadrant_t *q1 = (const p4est_quadrant_t *) v1;

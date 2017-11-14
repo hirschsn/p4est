@@ -36,7 +36,13 @@
 
 SC_EXTERN_C_BEGIN;
 
-/** Find the lowest position tq in a quadrant array such that tq >= q.
+/** Find the lowest position tq in a quadrant array such that tq >= q, i.e. the
+ * first quadrant that is not smaller than q.
+ *
+ * \param [in] array     Sorted array of quadrants.
+ * \param [in] q         Quadrant to locate.
+ * \param [in] guess     Initial search position.
+ *
  * \return  Returns the id of the matching quadrant
  *                  or -1 if not found or the array is empty.
  */
@@ -45,12 +51,77 @@ ssize_t             p8est_find_lower_bound (sc_array_t * array,
                                             size_t guess);
 
 /** Find the highest position tq in a quadrant array such that tq <= q.
+ *
+ * \param [in] array     Sorted array of quadrants.
+ * \param [in] q         Quadrant to locate.
+ * \param [in] guess     Initial search position.
+ *
  * \return  Returns the id of the matching quadrant
  *                  or -1 if not found or the array is empty.
  */
 ssize_t             p8est_find_higher_bound (sc_array_t * array,
                                              const p8est_quadrant_t * q,
                                              size_t guess);
+
+/** Find the lowest position tq in a quadrant array such that tq >= q, i.e. the
+ * first quadrant that is not smaller than q. Compare using
+ * p8est_quadrant_disjoint.
+ *
+ * \param [in] array     Sorted array of quadrants.
+ * \param [in] q         Quadrant to locate.
+ * \param [in] guess     Initial search position.
+ *
+ * \return  Returns the id of the matching quadrant
+ *                  or -1 if not found or the array is empty.
+ */
+ssize_t             p8est_find_lower_bound_overlap (sc_array_t * array,
+                                                    const p8est_quadrant_t *
+                                                    q, size_t guess);
+
+/** Find the highest position tq in a quadrant array such that tq <= q. Compare
+ * using p8est_quadrant_disjoint.
+ *
+ * \param [in] array     Sorted array of quadrants.
+ * \param [in] q         Quadrant to locate.
+ * \param [in] guess     Initial search position.
+ *
+ * \return  Returns the id of the matching quadrant
+ *                  or -1 if not found or the array is empty.
+ */
+ssize_t             p8est_find_higher_bound_overlap (sc_array_t * array,
+                                                     const p8est_quadrant_t *
+                                                     q, size_t guess);
+
+/** Find the lowest position tq in a quadrant array such that tq >= q, i.e. the
+ * first quadrant that is not smaller than q. Compare using
+ * p8est_quadrant_disjoint_piggy.
+ *
+ * \param [in] array     Sorted array of quadrants.
+ * \param [in] q         Quadrant to locate.
+ * \param [in] guess     Initial search position.
+ *
+ * \return  Returns the id of the matching quadrant
+ *                  or -1 if not found or the array is empty.
+ */
+ssize_t             p8est_find_lower_bound_overlap_piggy (sc_array_t * array,
+                                                          const
+                                                          p8est_quadrant_t *
+                                                          q, size_t guess);
+
+/** Find the highest position tq in a quadrant array such that tq <= q. Compare
+ * using p8est_quadrant_disjoint_piggy.
+ *
+ * \param [in] array     Sorted array of quadrants.
+ * \param [in] q         Quadrant to locate.
+ * \param [in] guess     Initial search position.
+ *
+ * \return  Returns the id of the matching quadrant
+ *                  or -1 if not found or the array is empty.
+ */
+ssize_t             p8est_find_higher_bound_overlap_piggy (sc_array_t * array,
+                                                           const
+                                                           p8est_quadrant_t *
+                                                           q, size_t guess);
 
 /** Search a local quadrant by its cumulative number in the forest.
  *
@@ -203,6 +274,43 @@ void                p8est_search (p8est_t * p8est,
                                   p8est_search_query_t search_quadrant_fn,
                                   p8est_search_query_t search_point_fn,
                                   sc_array_t * points);
+
+/** Callback function for the traversal recursion.
+ * \param [in] p8est        The forest to traverse.
+ *                          Its local quadrants are never accessed.
+ * \param [in] which_tree   The tree number under consideration.
+ * \param [in] quadrant     This quadrant is not from local forest storage,
+ *                          and its user data is undefined.  It represents
+ *                          the branch of the forest in the top-down recursion.
+ * \param [in] pfirst       The lowest processor that owns part of \b quadrant.
+ *                          Guaranteed to be non-empty.
+ * \param [in] plast        The highest processor that owns part of \b quadrant.
+ *                          Guaranteed to be non-empty.  If this is equal to
+ *                          \b pfirst, then the recursion will stop for
+ *                          quadrant's branch after this function returns.
+ * \return                  If false, the recursion at quadrant is terminated.
+ *                          If true, it continues if \b pfirst < \b plast.
+ */
+typedef int         (*p8est_traverse_query_t) (p8est_t * p8est,
+                                               p4est_topidx_t which_tree,
+                                               p8est_quadrant_t * quadrant,
+                                               int pfirst, int plast);
+
+/** Traverse the global partition top-down.
+ * We proceed top-down through the partition, identically on all processors
+ * except for the results of a user-provided callback.  The recursion will only
+ * go down branches that are split between multiple processors.  The callback
+ * function can be used to stop a branch recursion even for split branches.
+ * \note Traversing the whole processor partition will likely by inefficient,
+ *       so sensible use of the callback function is advised.
+ * \param [in] p8est        The forest to traverse.
+ *                          Its local quadrants are never accessed.
+ * \param [in] traverse_fn  This function controls the recursion,
+ *                          which only continues deeper if this
+ *                          callback returns true for a branch quadrant.
+ */
+void                p8est_traverse (p8est_t * p8est,
+                                    p8est_traverse_query_t traverse_fn);
 
 SC_EXTERN_C_END;
 

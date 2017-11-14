@@ -91,6 +91,16 @@ int                 p4est_quadrant_disjoint (const void *v1, const void *v2);
 int                 p4est_quadrant_compare_piggy (const void *v1,
                                                   const void *v2);
 
+/** Compare two quadrants in their Morton ordering and the which_tree member.
+ * Both quadrants must be extended. Return equivalence if the two quadrants
+ * overlap.
+ * \return Returns < 0 if \a v1 < \a v2 and \a v1 and \a v2 do not overlap,
+ *                   0 if \a v1 and \a v2 overlap,
+ *                 > 0 if \a v1 > \a v2 and \a v1 and \a v2 do not overlap.
+ */
+int                 p4est_quadrant_disjoint_piggy (const void *v1,
+                                                   const void *v2);
+
 /** Compare two quadrants with respect to their local_num in the piggy3 member.
  * \return Returns < 0 if \a v1 < \a v2,
  *                   0 if \a v1 == \a v2,
