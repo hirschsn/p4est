@@ -887,6 +887,7 @@ p4est_meshiter_set_neighbor_quad_info (p4est_meshiter_t * mesh_iter,
                         mesh_iter->mesh->ghost_num_quadrants));
     }
     else {
+      mesh_iter->neighbor_is_ghost = 0;
       P4EST_ASSERT ((0 <= mesh_iter->neighbor_qid)
                     && (mesh_iter->neighbor_qid <
                         mesh_iter->mesh->local_num_quadrants));
