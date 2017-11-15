@@ -234,7 +234,7 @@ p4est_meshiter_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
   /* set internal state */
   mesh_iter->real_on_level_local = ((traverse_ghosts == P4EST_TRAVERSE_GHOST)
                                     || (traverse_virtuals ==
-                                        P4EST_TRAVERSE_REAL) ? 0
+                                        P4EST_TRAVERSE_VIRTUAL) ? 0
                                     : (mesh_iter->mesh->quad_level +
                                        mesh_iter->current_level)->elem_count);
 
