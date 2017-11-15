@@ -882,6 +882,14 @@ p4est_meshiter_set_neighbor_quad_info (p4est_meshiter_t * mesh_iter,
     if (mesh_iter->p4est->local_num_quadrants <= mesh_iter->neighbor_qid) {
       mesh_iter->neighbor_is_ghost = 1;
       mesh_iter->neighbor_qid -= mesh_iter->p4est->local_num_quadrants;
+      P4EST_ASSERT ((0 <= mesh_iter->neighbor_qid)
+                    && (mesh_iter->neighbor_qid <
+                        mesh_iter->mesh->ghost_num_quadrants));
+    }
+    else {
+      P4EST_ASSERT ((0 <= mesh_iter->neighbor_qid)
+                    && (mesh_iter->neighbor_qid <
+                        mesh_iter->mesh->local_num_quadrants));
     }
     mesh_iter->neighbor_vid =
       *(int *) sc_array_index (&mesh_iter->neighbor_vids, 0);
