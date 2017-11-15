@@ -865,7 +865,7 @@ p4est_meshiter_set_neighbor_quad_info (p4est_meshiter_t * mesh_iter,
                 && (mesh_iter->neighbor_encs.elem_count ==
                     mesh_iter->neighbor_vids.elem_count));
   if (0 == mesh_iter->neighbor_encs.elem_count) {
-    discard_neighbors (mesh_iter);
+    return 0;
   }
   else {
     P4EST_ASSERT (1 == mesh_iter->neighbor_encs.elem_count);
@@ -879,7 +879,7 @@ p4est_meshiter_set_neighbor_quad_info (p4est_meshiter_t * mesh_iter,
                                     l_half_size, u_half_size);
     mesh_iter->neighbor_qid =
       *(int *) sc_array_index (&mesh_iter->neighbor_qids, 0);
-    if (mesh_iter->neighbor_qid < mesh_iter->p4est->local_num_quadrants) {
+    if (mesh_iter->p4est->local_num_quadrants <= mesh_iter->neighbor_qid) {
       mesh_iter->neighbor_is_ghost = 1;
       mesh_iter->neighbor_qid -= mesh_iter->p4est->local_num_quadrants;
     }
