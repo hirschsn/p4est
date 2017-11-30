@@ -1839,7 +1839,7 @@ p4est_mesh_get_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
   /*  curr_quad_id must be part of the processors quadrants, */
   P4EST_ASSERT (0 <= curr_quad_id && curr_quad_id < lq);
 
-  switch (ghost->btype) {
+  switch (mesh->btype) {
   case P4EST_CONNECT_FACE:
     P4EST_ASSERT (direction >= 0 && direction < P4EST_FACES);
     break;
