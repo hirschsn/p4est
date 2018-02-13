@@ -967,7 +967,6 @@ p4est_meshiter_get_neighbor_storage_id (p4est_meshiter_t * mesh_iter)
                       mesh_iter->current_level)->elem_count;
 
   if (-1 < mesh_iter->neighbor_vid) {
-    P4EST_ASSERT (mesh_iter->traverse_virtuals != P4EST_TRAVERSE_REAL);
     P4EST_ASSERT (0 <= mesh_iter->neighbor_vid
                   && mesh_iter->neighbor_vid < P4EST_CHILDREN);
 
