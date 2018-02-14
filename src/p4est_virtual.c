@@ -37,12 +37,7 @@
 /* -------------------------------------------------------------------------- */
 /* |                           Virtual quadrants                            | */
 /* -------------------------------------------------------------------------- */
-/** Determine if qid needs to contain virtual quadrants for inner quadrants,
- * i.e. quadrants that are not mirrors.
- * This function can potentially exit the loop earlier than \ref
- * has_virtuals_parallel_boundary, because it needs not decide if ghost
- * quadrants need virtual quadrants as well.
- * For using this optimization mesh needs a populated parallel_boundary array.
+/** Determine if qid needs to contain virtual quadrants.
  * \param    [out] virtual_quads       Virtual structure to populate.
  * \param[in]      ghost     Current ghost-layer.
  * \param[in]      mesh      Mesh structure containing neighbor information.
@@ -55,11 +50,11 @@
  *                           contains *p4est_quadrant_t.
  */
 static int
-has_virtuals_inner (p4est_virtual_t * virtual_quads, p4est_t * p4est,
-                    p4est_ghost_t * ghost, p4est_mesh_t * mesh, int qid,
-                    p4est_locidx_t * lq_per_level_real,
-                    p4est_locidx_t * lq_per_level_virt, int *last_virtual,
-                    sc_array_t * quads)
+has_virtuals (p4est_virtual_t * virtual_quads, p4est_t * p4est,
+              p4est_ghost_t * ghost, p4est_mesh_t * mesh, int qid,
+              p4est_locidx_t * lq_per_level_real,
+              p4est_locidx_t * lq_per_level_virt, int *last_virtual,
+              sc_array_t * quads)
 {
   int                 i, imax, j;
   int                 has_virtuals = 0;
@@ -92,116 +87,13 @@ has_virtuals_inner (p4est_virtual_t * virtual_quads, p4est_t * p4est,
 
   for (has_virtuals = 0, i = 0; !has_virtuals && i < imax; ++i) {
     sc_array_truncate (quads);
-
     p4est_mesh_get_neighbors (p4est, ghost, mesh, qid, i, quads, NULL, NULL);
+
     for (j = 0; j < (int) quads->elem_count; ++j) {
       neighbor = *(p4est_quadrant_t **) sc_array_index (quads, j);
       if (level < neighbor->level) {
         has_virtuals = 1;
         break;
-      }
-    }
-  }
-  if (virtual_quads->quad_qreal_offset) {
-    virtual_quads->quad_qreal_offset[qid] =
-      lq_per_level_real[level] + P4EST_CHILDREN * lq_per_level_virt[level];
-    ++lq_per_level_real[level];
-  }
-  if (has_virtuals) {
-    virtual_quads->virtual_qflags[qid] = ++(*last_virtual);
-    virtual_quads->local_num_virtuals += P4EST_CHILDREN;
-    if (virtual_quads->quad_qreal_offset) {
-      virtual_quads->quad_qvirtual_offset[qid] =
-        lq_per_level_real[level + 1] +
-        P4EST_CHILDREN * lq_per_level_virt[level + 1];
-      ++lq_per_level_virt[level + 1];
-      insert_locidx_t =
-        (p4est_locidx_t *) sc_array_push (virtual_quads->virtual_qlevels +
-                                          (level + 1));
-      *insert_locidx_t = qid;
-    }
-  }
-
-  return 0;
-}
-
-/** Determine if qid needs to contain virtual quadrants for quadrants that are
- * either mirrors or for a mesh without parallel_boundary array.
- * This function always checks all neighbors, because it has to decide if ghost
- * quadrants need virtual quadrants.
- * \param    [out] virtual_quads   Virtual structure to populate.
- * \param[in]      ghost     Current ghost-layer.
- * \param[in]      mesh      Mesh structure containing neighbor information.
- * \param[in]      qid       Local quadrant index for which to check.
- * \param[in][out] lq_per_level_real   Number of real quadrants per level
- *                                     processed up to current quadrant.
- * \param[in][out] lq_per_level_virt   Number of virtual quadrants per level
-                                       created up to current quadrant.
- * \param[in]      quads     Empty container for more efficient neighbor search,
- *                           contains *p4est_quadrant_t.
- * \param[in]      qids      Empty container for more efficient neighbor search,
- *                           contains p4est_locidx_t.
- */
-static int
-has_virtuals_parallel_boundary (p4est_virtual_t * virtual_quads,
-                                p4est_t * p4est, p4est_ghost_t * ghost,
-                                p4est_mesh_t * mesh, p4est_locidx_t qid,
-                                p4est_locidx_t * lq_per_level_real,
-                                p4est_locidx_t * lq_per_level_virt,
-                                int *last_virtual, sc_array_t * quads,
-                                sc_array_t * qids)
-{
-  int                 i, imax, j;
-  p4est_locidx_t      lq, gq;
-  int                 level;
-  int                 has_virtuals = 0;
-  p4est_quadrant_t   *curr_quad = p4est_mesh_get_quadrant (p4est, mesh, qid);
-  p4est_quadrant_t   *neighbor;
-  p4est_locidx_t      neighbor_qid;
-  p4est_locidx_t     *insert_locidx_t;
-
-  lq = virtual_quads->local_num_quadrants;
-  gq = virtual_quads->ghost_num_quadrants;
-
-  level = curr_quad->level;
-
-  switch (virtual_quads->btype) {
-  case P4EST_CONNECT_FACE:
-    imax = P4EST_FACES;
-    break;
-#ifdef P4_TO_P8
-  case P8EST_CONNECT_EDGE:
-    imax = P4EST_FACES + P8EST_EDGES;
-#endif /* P4_TO_P8 */
-    break;
-  case P4EST_CONNECT_FULL:
-    /* *INDENT-OFF* */
-    imax = P4EST_FACES +
-#ifdef P4_TO_P8
-           P8EST_EDGES +
-#endif /* P4_TO_P8 */
-           P4EST_CHILDREN;
-    /* *INDENT-ON* */
-    break;
-  default:
-    SC_ABORT_NOT_REACHED ();
-  }
-
-  /* check if virtual quadrants need to be created */
-  for (i = 0; i < imax; ++i) {
-    sc_array_truncate (quads);
-    sc_array_truncate (qids);
-
-    p4est_mesh_get_neighbors (p4est, ghost, mesh, qid, i, quads, NULL, qids);
-    for (j = 0; j < (int) quads->elem_count; ++j) {
-      neighbor = *(p4est_quadrant_t **) sc_array_index (quads, j);
-      neighbor_qid = *(int *) sc_array_index (qids, j);
-      if (level < neighbor->level) {
-        has_virtuals = 1;
-      }
-      else if ((lq <= neighbor_qid) && (neighbor_qid <= (lq + gq))
-               && (neighbor->level < level)) {
-        virtual_quads->virtual_gflags[neighbor_qid - lq] = 1;
       }
     }
   }
@@ -249,6 +141,14 @@ p4est_virtual_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
   p4est_locidx_t     *gq_per_level_real, *gq_per_level_virt;
   p4est_locidx_t     *insert_locidx_t;
   p4est_quadrant_t   *ghost_quad;
+  const int           num_procs = p4est->mpisize;
+  int                 mpiret;
+  int                 q;
+  char               *mem, **sbuf;
+  p4est_locidx_t      ng_excl, ng_incl, ng, theg;
+  p4est_locidx_t      mirr;
+  sc_MPI_Request     *r;
+  sc_array_t         *requests, *sbuffers;
 
   quads = sc_array_new (sizeof (p4est_quadrant_t *));
   qids = sc_array_new (sizeof (int));
@@ -270,8 +170,6 @@ p4est_virtual_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
   virtual_quads->virtual_gflags = P4EST_ALLOC (p4est_locidx_t, gq);
   memset (virtual_quads->virtual_qflags, (char) -1,
           lq * sizeof (p4est_locidx_t));
-  memset (virtual_quads->virtual_gflags, (char) -1,
-          gq * sizeof (p4est_locidx_t));
 
   if (compute_level_lists) {
     virtual_quads->quad_qreal_offset = P4EST_ALLOC (p4est_locidx_t, lq);
@@ -302,25 +200,72 @@ p4est_virtual_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
   for (quad = 0; quad < lq; ++quad) {
     sc_array_truncate (quads);
     sc_array_truncate (qids);
-    if (mesh->parallel_boundary && -1 == mesh->parallel_boundary[quad]) {
-      has_virtuals_inner (virtual_quads, p4est, ghost, mesh, quad,
-                          lq_per_level_real, lq_per_level_virt,
-                          &last_virtual_index, quads);
-    }
-    else {
-      has_virtuals_parallel_boundary (virtual_quads, p4est, ghost, mesh, quad,
-                                      lq_per_level_real, lq_per_level_virt,
-                                      &last_virtual_index, quads, qids);
+    has_virtuals (virtual_quads, p4est, ghost, mesh, quad, lq_per_level_real,
+                  lq_per_level_virt, &last_virtual_index, quads);
+  }
+
+  /** communicate virtual_qflags of mirror quadrants */
+  requests = sc_array_new (sizeof (sc_MPI_Request));
+  for (ng_excl = 0, q = 0; q < num_procs; ++q) {
+    ng_incl = ghost->proc_offsets[q + 1];
+    ng = ng_incl - ng_excl;
+    P4EST_ASSERT (ng >= 0);
+    if (ng > 0) {
+      r = (sc_MPI_Request *) sc_array_push (requests);
+      mpiret = sc_MPI_Irecv ((char *) virtual_quads->virtual_gflags +
+                             ng_excl * sizeof (p4est_locidx_t),
+                             ng * sizeof (p4est_locidx_t), sc_MPI_BYTE, q,
+                             P4EST_COMM_GHOST_EXCHANGE, p4est->mpicomm, r);
+      SC_CHECK_MPI (mpiret);
+      ng_excl = ng_incl;
     }
   }
+  P4EST_ASSERT (ng_excl == gq);
+
+  sbuffers = sc_array_new (sizeof (char *));
+  /* send data to other processors */
+  for (ng_excl = 0, q = 0; q < num_procs; ++q) {
+    ng_incl = ghost->mirror_proc_offsets[q + 1];
+    ng = ng_incl - ng_excl;
+    P4EST_ASSERT (ng >= 0);
+    if (ng > 0) {
+      /* every peer populates its own send buffer */
+      sbuf = (char **) sc_array_push (sbuffers);
+      mem = *sbuf = P4EST_ALLOC (char, ng * sizeof (p4est_locidx_t));
+      for (theg = 0; theg < ng; ++theg) {
+        mirr = ghost->mirror_proc_mirrors[ng_excl + theg];
+        P4EST_ASSERT (0 <= mirr && (size_t) mirr < ghost->mirrors.elem_count);
+        memcpy (mem, &virtual_quads->virtual_qflags[mesh->mirror_qid[mirr]],
+                sizeof (p4est_locidx_t));
+        mem += sizeof (p4est_locidx_t);
+      }
+      r = (sc_MPI_Request *) sc_array_push (requests);
+      mpiret =
+        sc_MPI_Isend (*sbuf, ng * sizeof (p4est_locidx_t), sc_MPI_BYTE, q,
+                      P4EST_COMM_GHOST_EXCHANGE, p4est->mpicomm, r);
+      SC_CHECK_MPI (mpiret);
+      ng_excl = ng_incl;
+    }
+  }
+
+  /* wait for messages to complete and clean up */
+  mpiret =
+    sc_MPI_Waitall (requests->elem_count, (sc_MPI_Request *) requests->array,
+                    sc_MPI_STATUSES_IGNORE);
+  SC_CHECK_MPI (mpiret);
+  sc_array_destroy (requests);
+  for (q = 0; q < sbuffers->elem_count; ++q) {
+    sbuf = (char **) sc_array_index (sbuffers, q);
+    P4EST_FREE (*sbuf);
+  }
+  sc_array_destroy (sbuffers);
 
   last_virtual_index = 0;
   /* set gflags and create level and offset arrays if necessary */
   for (quad = 0; quad < gq; ++quad) {
+    ghost_quad = p4est_quadrant_array_index (&ghost->ghosts, quad);
+    level = ghost_quad->level;
     if (virtual_quads->quad_qreal_offset) {
-      ghost_quad = p4est_quadrant_array_index (&ghost->ghosts, quad);
-      level = ghost_quad->level;
-
       virtual_quads->quad_greal_offset[quad] =
         gq_per_level_real[level] + P4EST_CHILDREN * gq_per_level_virt[level];
       ++gq_per_level_real[level];
@@ -470,27 +415,7 @@ p4est_virtual_ghost_new (p4est_t * p4est, p4est_ghost_t * ghost,
       mirror_qid = mesh->mirror_qid[ghost->mirror_proc_mirrors[mirror_idx]];
       curr_quad = p4est_mesh_get_quadrant (p4est, mesh, mirror_qid);
       if (-1 < virtual_quads->virtual_qflags[mirror_qid]) {
-        for (neighbor_idx = 0;
-             virtual_ghost->mirror_proc_virtuals[mirror_idx] != 1
-             && neighbor_idx < max_neighbor_idx; ++neighbor_idx) {
-          sc_array_truncate (nqid);
-          sc_array_truncate (nquad);
-          p4est_mesh_get_neighbors (p4est, ghost, mesh, mirror_qid,
-                                    neighbor_idx, nquad, NULL, nqid);
-          for (n = 0; n < nqid->elem_count; ++n) {
-            neighbor_qid = *(p4est_locidx_t *) sc_array_index (nqid, n);
-            if (lq <= neighbor_qid && neighbor_qid < (lq + gq)) {
-              neighbor_qid -= lq;
-              if (mesh->ghost_to_proc[neighbor_qid] == proc) {
-                neighbor_quad =
-                  *(p4est_quadrant_t **) sc_array_index (nquad, n);
-                if (neighbor_quad->level > curr_quad->level) {
-                  virtual_ghost->mirror_proc_virtuals[mirror_idx] = 1;
-                }
-              }
-            }
-          }
-        }
+        virtual_ghost->mirror_proc_virtuals[mirror_idx] = 1;
       }
     }
   }
