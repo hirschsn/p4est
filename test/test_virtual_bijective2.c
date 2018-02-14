@@ -417,7 +417,7 @@ test_virtual_one_tree (p4est_t * p4est, p4est_connectivity_t * conn,
   /* create mesh */
 
   ghost = p4est_ghost_new (p4est, btype);
-  mesh = p4est_mesh_new_ext (p4est, ghost, 1, 1, 0, btype);
+  mesh = p4est_mesh_new_ext (p4est, ghost, 1, 1, 1, btype);
   virtual_quads = p4est_virtual_new (p4est, ghost, mesh, btype);
 
   /* check mesh */
@@ -475,7 +475,7 @@ test_virtual_two_trees (p4est_t * p4est, p4est_connectivity_t * conn,
 
         /* create mesh */
         ghost = p4est_ghost_new (p4est, btype);
-        mesh = p4est_mesh_new_ext (p4est, ghost, 1, 1, 0, btype);
+        mesh = p4est_mesh_new_ext (p4est, ghost, 1, 1, 1, btype);
         virtual_quads = p4est_virtual_new (p4est, ghost, mesh, btype);
 
         /* check mesh */
@@ -538,7 +538,7 @@ test_virtual_multiple_trees_brick (p4est_t * p4est,
 
   /* create mesh */
   ghost = p4est_ghost_new (p4est, btype);
-  mesh = p4est_mesh_new_ext (p4est, ghost, 1, 1, 0, btype);
+  mesh = p4est_mesh_new_ext (p4est, ghost, 1, 1, 1, btype);
   virtual_quads = p4est_virtual_new (p4est, ghost, mesh, btype);
 
   /* check mesh */
