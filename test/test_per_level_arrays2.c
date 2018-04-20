@@ -98,7 +98,7 @@ check_virtual_level_offsets (p4est_t * p4est, p4est_ghost_t * ghost,
   int                 i_real, i_virt;
   p4est_locidx_t      qid_real, qid_virt;
   int                 level, quad_per_level;
-  int                 offset, offset_old;
+  int                 offset = 0, offset_old;
   int                 last_real, last_virtual;
 
   P4EST_ASSERT (mesh->quad_level != 0 && mesh->ghost_level != 0);
