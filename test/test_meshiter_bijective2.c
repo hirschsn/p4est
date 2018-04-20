@@ -41,13 +41,8 @@ int
 check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
                    p4est_mesh_t * mesh, p4est_virtual_t * virtual_quads)
 {
-  int                 level, entity;
-  int                 i, imax, iinv, j, k;
-  int                 dir, dir_inv;
-  int                 n_neighbor_entities, n_hanging_quads;
-  int                 l_same_size, u_same_size;
-  int                 l_double_size, u_double_size;
-  int                 l_half_size, u_half_size;
+  int                 level;
+  int                 i, imax, iinv;
   int                 success;
   int                 status_main, status_help;
   p4est_meshiter_t   *main_iterator, *help_iterator;
@@ -85,26 +80,6 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
       if (status_main != P4EST_MESHITER_DONE) {
         for (i = 0; i < imax; ++i) {
           success = 0;
-
-          if (0 <= i && i < P4EST_FACES) {
-            entity = 0;
-          }
-#ifdef P4_TO_P8
-          else if (P4EST_FACES <= i && i < (P4EST_FACES + P8EST_EDGES)) {
-            entity = 1;
-          }
-          else if ((P4EST_FACES + P8EST_EDGES) <= i &&
-                   i < (P4EST_FACES + P8EST_EDGES + P4EST_CHILDREN)) {
-            entity = 2;
-          }
-#else /* P4_TO_P8 */
-          else if (P4EST_FACES <= i && i < (P4EST_FACES + P4EST_CHILDREN)) {
-            entity = 1;
-          }
-#endif /* P4_TO_P8 */
-          else {
-            SC_ABORT_NOT_REACHED ();
-          }
 
           p4est_meshiter_set_neighbor_quad_info (main_iterator, i);
 
@@ -152,6 +127,7 @@ check_bijectivity (p4est_t * p4est, p4est_ghost_t * ghost,
 
     p4est_meshiter_destroy (main_iterator);
   }
+  return 0;
 }
 
 /* Function for testing p4est-mesh for a single tree scenario
