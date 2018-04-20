@@ -548,7 +548,7 @@ mesh_iter_edge (p8est_iter_edge_info_t * info, void *user_data)
   size_t              i, j, k, cz, zz;
   int                 swapsides;
   p4est_locidx_t      qid1, qid2, qls1[2], qoffset;
-  p4est_locidx_t      eid1, eid2;
+  p4est_locidx_t      eid1 = -1, eid2 = -1;
   p4est_locidx_t      edgeid;
   p4est_locidx_t      in_qtoe, edgeid_offset;
   p4est_mesh_t       *mesh = ((mesh_iteration_t *) user_data)->mesh;
@@ -1134,7 +1134,7 @@ p4est_mesh_memory_used (p4est_mesh_t * mesh)
 {
   size_t              i, lqz, ngz;
   int                 level;
-  int                 n_mirrors;
+  int                 n_mirrors = 0;
   size_t              qtt_memory = 0;
   size_t              ql_memory = 0;
   size_t              pb_memory = 0;
