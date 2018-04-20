@@ -360,47 +360,15 @@ p4est_virtual_ghost_new (p4est_t * p4est, p4est_ghost_t * ghost,
                          p4est_connect_type_t btype)
 {
   int                 proc;
-  p4est_locidx_t      lq, gq;
   p4est_locidx_t      offset_begin, offset_end;
   p4est_locidx_t      mirror_idx, mirror_qid;
-  p4est_locidx_t      neighbor_qid;
-  p4est_quadrant_t   *curr_quad, *neighbor_quad;
-  int                 n, neighbor_idx, max_neighbor_idx;
-  sc_array_t         *nqid, *nquad;
   p4est_virtual_ghost_t *virtual_ghost;
-
-  lq = mesh->local_num_quadrants;
-  gq = mesh->ghost_num_quadrants;
-  nqid = sc_array_new (sizeof (p4est_locidx_t));
-  nquad = sc_array_new (sizeof (p4est_quadrant_t *));
 
   virtual_ghost = P4EST_ALLOC_ZERO (p4est_virtual_ghost_t, 1);
   P4EST_ASSERT (btype <= virtual_quads->btype);
   virtual_ghost->btype = btype;
   virtual_ghost->mirror_proc_virtuals =
     P4EST_ALLOC_ZERO (int8_t, ghost->mirror_proc_offsets[p4est->mpisize]);
-
-  switch (btype) {
-  case P4EST_CONNECT_FACE:
-    max_neighbor_idx = P4EST_FACES;
-    break;
-#ifdef P4_TO_P8
-  case P8EST_CONNECT_EDGE:
-    max_neighbor_idx = P4EST_FACES + P8EST_EDGES;
-    break;
-#endif /* P4_TO_P8 */
-  case P4EST_CONNECT_FULL:
-      /* *INDENT-OFF* */
-      max_neighbor_idx = P4EST_FACES +
-#ifdef P4_TO_P8
-                         P8EST_EDGES +
-#endif /* P4_TO_P8 */
-                         P4EST_CHILDREN;
-      /* *INDENT-ON* */
-    break;
-  default:
-    SC_ABORT_NOT_REACHED ();
-  }
 
   /* populate mirror_proc_virtuals:
    * Iterate ghost->mirror_proc_mirrors for each process.  Consider for each
@@ -413,15 +381,12 @@ p4est_virtual_ghost_new (p4est_t * p4est, p4est_ghost_t * ghost,
     offset_end = ghost->mirror_proc_offsets[proc + 1];
     for (mirror_idx = offset_begin; mirror_idx < offset_end; ++mirror_idx) {
       mirror_qid = mesh->mirror_qid[ghost->mirror_proc_mirrors[mirror_idx]];
-      curr_quad = p4est_mesh_get_quadrant (p4est, mesh, mirror_qid);
       if (-1 < virtual_quads->virtual_qflags[mirror_qid]) {
         virtual_ghost->mirror_proc_virtuals[mirror_idx] = 1;
       }
     }
   }
 
-  sc_array_destroy (nqid);
-  sc_array_destroy (nquad);
   return virtual_ghost;
 }
 
