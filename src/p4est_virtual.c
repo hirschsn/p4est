@@ -701,8 +701,8 @@ p4est_virtual_ghost_exchange_data_level_begin (p4est_t * p4est,
         }
         mpiret =
           sc_MPI_Irecv ((uint8_t *) ghost_data[level] + offset * data_size,
-                        lmatches * data_size, sc_MPI_BYTE, q,
-                        P4EST_COMM_GHOST_EXCHANGE, p4est->mpicomm, r);
+                        lmatches * data_size, sc_MPI_BYTE, q, (200 + level),
+                        p4est->mpicomm, r);
         SC_CHECK_MPI (mpiret);
       }
     }
@@ -767,7 +767,7 @@ p4est_virtual_ghost_exchange_data_level_begin (p4est_t * p4est,
         }
         r = (sc_MPI_Request *) sc_array_push (&exc->requests);
         mpiret = sc_MPI_Isend (*sbuf, lmatches * data_size, sc_MPI_BYTE, q,
-                               P4EST_COMM_GHOST_EXCHANGE, p4est->mpicomm, r);
+                               (200+level), p4est->mpicomm, r);
         SC_CHECK_MPI (mpiret);
       }
       ng_excl = ng_incl;
