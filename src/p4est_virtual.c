@@ -54,14 +54,14 @@ has_virtuals (p4est_virtual_t * virtual_quads, p4est_t * p4est,
               p4est_ghost_t * ghost, p4est_mesh_t * mesh, int qid,
               p4est_locidx_t * lq_per_level_real,
               p4est_locidx_t * lq_per_level_virt, int *last_virtual,
-              sc_array_t * quads)
+              sc_array_t * quads, sc_array_t * qids)
 {
   int                 i, imax, j;
   int                 has_virtuals = 0;
   p4est_quadrant_t   *curr_quad = p4est_mesh_get_quadrant (p4est, mesh, qid);
   p4est_quadrant_t   *neighbor;
   int                 level = curr_quad->level;
-  p4est_locidx_t     *insert_locidx_t;
+  p4est_locidx_t     *insert_locidx_t, neighbor_qid;
 
   switch (virtual_quads->btype) {
   case P4EST_CONNECT_FACE:
@@ -85,15 +85,24 @@ has_virtuals (p4est_virtual_t * virtual_quads, p4est_t * p4est,
     SC_ABORT_NOT_REACHED ();
   }
 
-  for (has_virtuals = 0, i = 0; !has_virtuals && i < imax; ++i) {
+  for (has_virtuals = virtual_quads->virtual_qflags[qid], i = 0;
+       has_virtuals == -1 && i < imax; ++i) {
     sc_array_truncate (quads);
-    p4est_mesh_get_neighbors (p4est, ghost, mesh, qid, i, quads, NULL, NULL);
+    sc_array_truncate (qids);
+    p4est_mesh_get_neighbors (p4est, ghost, mesh, qid, i, quads, NULL, qids);
 
     for (j = 0; j < (int) quads->elem_count; ++j) {
       neighbor = *(p4est_quadrant_t **) sc_array_index (quads, j);
       if (level < neighbor->level) {
         has_virtuals = 1;
         break;
+      }
+      else if(neighbor->level < level) {
+        neighbor_qid = *(int *) sc_array_index(qids, j);
+        if (neighbor_qid < virtual_quads->local_num_quadrants &&
+            qid < neighbor_qid) {
+          virtual_quads->virtual_qflags[neighbor_qid] = 1;
+        }
       }
     }
   }
@@ -102,7 +111,7 @@ has_virtuals (p4est_virtual_t * virtual_quads, p4est_t * p4est,
       lq_per_level_real[level] + P4EST_CHILDREN * lq_per_level_virt[level];
     ++lq_per_level_real[level];
   }
-  if (has_virtuals) {
+  if (has_virtuals != -1) {
     virtual_quads->virtual_qflags[qid] = ++(*last_virtual);
     virtual_quads->local_num_virtuals += P4EST_CHILDREN;
     if (virtual_quads->quad_qreal_offset) {
@@ -198,10 +207,8 @@ p4est_virtual_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
   }
 
   for (quad = 0; quad < lq; ++quad) {
-    sc_array_truncate (quads);
-    sc_array_truncate (qids);
     has_virtuals (virtual_quads, p4est, ghost, mesh, quad, lq_per_level_real,
-                  lq_per_level_virt, &last_virtual_index, quads);
+                  lq_per_level_virt, &last_virtual_index, quads, qids);
   }
 
   /** communicate virtual_qflags of mirror quadrants */
