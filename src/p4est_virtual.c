@@ -97,8 +97,8 @@ has_virtuals (p4est_virtual_t * virtual_quads, p4est_t * p4est,
         has_virtuals = 1;
         break;
       }
-      else if(neighbor->level < level) {
-        neighbor_qid = *(int *) sc_array_index(qids, j);
+      else if (neighbor->level < level) {
+        neighbor_qid = *(int *) sc_array_index (qids, j);
         if (neighbor_qid < virtual_quads->local_num_quadrants &&
             qid < neighbor_qid) {
           virtual_quads->virtual_qflags[neighbor_qid] = 1;
@@ -774,7 +774,7 @@ p4est_virtual_ghost_exchange_data_level_begin (p4est_t * p4est,
         }
         r = (sc_MPI_Request *) sc_array_push (&exc->requests);
         mpiret = sc_MPI_Isend (*sbuf, lmatches * data_size, sc_MPI_BYTE, q,
-                               (200+level), p4est->mpicomm, r);
+                               (200 + level), p4est->mpicomm, r);
         SC_CHECK_MPI (mpiret);
       }
       ng_excl = ng_incl;
@@ -1787,6 +1787,7 @@ get_neighbor_real (p4est_t * p4est, p4est_ghost_t * ghost,
       P4EST_ASSERT (0 <= tmp_subindex && tmp_subindex < P4EST_HALF);
       tmp_subindex = p4est_face_corners[query_dir_face][tmp_subindex];
       P4EST_ASSERT (0 <= tmp_subindex && tmp_subindex < P4EST_CHILDREN);
+
       set_xor_constants_corner_orth (tmp_dir, &corner_offset);
       tmp_subindex = tmp_subindex ^ corner_offset;
       P4EST_ASSERT (0 <= tmp_subindex && tmp_subindex < P4EST_CHILDREN);
@@ -2056,15 +2057,11 @@ get_virtual_face_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
  * All parameters are defined exactly as in \ref p4est_virtual_get_neighbor
  */
 static int
-get_virtual_edge_neighbors (p4est_t * p4est,
-                            p4est_ghost_t * ghost,
+get_virtual_edge_neighbors (p4est_t * p4est, p4est_ghost_t * ghost,
                             p4est_mesh_t * mesh,
-                            p4est_virtual_t *
-                            virtual_quads,
-                            p4est_locidx_t qid,
-                            p4est_locidx_t vid,
-                            int dir,
-                            sc_array_t * n_encs,
+                            p4est_virtual_t * virtual_quads,
+                            p4est_locidx_t qid, p4est_locidx_t vid,
+                            int dir, sc_array_t * n_encs,
                             sc_array_t * n_qids, sc_array_t * n_vids)
 {
   int                 i;
