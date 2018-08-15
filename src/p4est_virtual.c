@@ -129,6 +129,64 @@ has_virtuals (p4est_virtual_t * virtual_quads, p4est_t * p4est,
   return 0;
 }
 
+static void
+populate_ghost_flags(p4est_virtual_t *virtual_quads, p4est_t *p4est,
+                     p4est_ghost_t *ghost, p4est_mesh_t *mesh,
+                     sc_array_t *quads, sc_array_t *qids)
+{
+  int i, imax, j;
+  int level, mirror;
+  p4est_locidx_t mirror_qid, neighbor_qid;
+  p4est_quadrant_t *curr_quad, *neighbor;
+  p4est_locidx_t lq = virtual_quads->local_num_quadrants;
+  p4est_locidx_t gq = virtual_quads->ghost_num_quadrants;
+
+  switch (virtual_quads->btype) {
+  case P4EST_CONNECT_FACE:
+    imax = P4EST_FACES;
+    break;
+#ifdef P4_TO_P8
+  case P8EST_CONNECT_EDGE:
+    imax = P4EST_FACES + P8EST_EDGES;
+    break;
+#endif /* P4_TO_P8 */
+  case P4EST_CONNECT_FULL:
+    /* *INDENT-OFF* */
+    imax = P4EST_FACES +
+#ifdef P4_TO_P8
+           P8EST_EDGES +
+#endif /* P4_TO_P8 */
+           P4EST_CHILDREN;
+    /* *INDENT-ON* */
+    break;
+  default:
+    SC_ABORT_NOT_REACHED ();
+  }
+
+  for (mirror = 0; mirror < ghost->mirrors.elem_count; ++mirror) {
+    mirror_qid = mesh->mirror_qid[mirror];
+    curr_quad = p4est_mesh_get_quadrant(p4est, mesh, mirror_qid);
+    level = curr_quad->level;
+    for (i = 0; i < imax; ++i) {
+      sc_array_truncate (quads);
+      sc_array_truncate (qids);
+      p4est_mesh_get_neighbors(p4est, ghost, mesh, mirror_qid, i, quads, NULL,
+                               qids);
+
+      for (j = 0; j < (int) quads->elem_count; ++j) {
+        neighbor_qid = *(int*) sc_array_index(qids, j);
+        neighbor_qid -= lq;
+        if (0 <= neighbor_qid && neighbor_qid < gq) {
+          neighbor = *(p4est_quadrant_t **) sc_array_index (quads, j);
+          if (neighbor->level < level) {
+            virtual_quads->virtual_gflags[neighbor_qid] = 1;
+          }
+        }
+      }
+    }
+  }
+}
+
 p4est_virtual_t    *
 p4est_virtual_new (p4est_t * p4est, p4est_ghost_t * ghost,
                    p4est_mesh_t * mesh, p4est_connect_type_t btype)
@@ -150,6 +208,7 @@ p4est_virtual_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
   p4est_locidx_t     *gq_per_level_real, *gq_per_level_virt;
   p4est_locidx_t     *insert_locidx_t;
   p4est_quadrant_t   *ghost_quad;
+#if 0
   const int           num_procs = p4est->mpisize;
   int                 mpiret;
   int                 q;
@@ -158,6 +217,7 @@ p4est_virtual_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
   p4est_locidx_t      mirr;
   sc_MPI_Request     *r;
   sc_array_t         *requests, *sbuffers;
+#endif
 
   quads = sc_array_new (sizeof (p4est_quadrant_t *));
   qids = sc_array_new (sizeof (int));
@@ -179,6 +239,8 @@ p4est_virtual_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
   virtual_quads->virtual_gflags = P4EST_ALLOC (p4est_locidx_t, gq);
   memset (virtual_quads->virtual_qflags, (char) -1,
           lq * sizeof (p4est_locidx_t));
+  memset (virtual_quads->virtual_gflags, (char) -1,
+          gq * sizeof (p4est_locidx_t));
 
   if (compute_level_lists) {
     virtual_quads->quad_qreal_offset = P4EST_ALLOC (p4est_locidx_t, lq);
@@ -211,6 +273,7 @@ p4est_virtual_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
                   lq_per_level_virt, &last_virtual_index, quads, qids);
   }
 
+#if 0
   /** communicate virtual_qflags of mirror quadrants */
   requests = sc_array_new (sizeof (sc_MPI_Request));
   for (ng_excl = 0, q = 0; q < num_procs; ++q) {
@@ -266,6 +329,9 @@ p4est_virtual_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
     P4EST_FREE (*sbuf);
   }
   sc_array_destroy (sbuffers);
+#else
+  populate_ghost_flags(virtual_quads, p4est, ghost, mesh, quads, qids);
+#endif
 
   last_virtual_index = 0;
   /* set gflags and create level and offset arrays if necessary */
@@ -367,15 +433,47 @@ p4est_virtual_ghost_new (p4est_t * p4est, p4est_ghost_t * ghost,
                          p4est_connect_type_t btype)
 {
   int                 proc;
+  p4est_locidx_t      lq, gq;
   p4est_locidx_t      offset_begin, offset_end;
   p4est_locidx_t      mirror_idx, mirror_qid;
+  p4est_locidx_t      neighbor_qid;
+  p4est_quadrant_t   *curr_quad, *neighbor_quad;
+  int                 n, neighbor_idx, max_neighbor_idx;
+  sc_array_t         *nqid, *nquad;
   p4est_virtual_ghost_t *virtual_ghost;
+
+  lq = mesh->local_num_quadrants;
+  gq = mesh->ghost_num_quadrants;
+  nqid = sc_array_new (sizeof (p4est_locidx_t));
+  nquad = sc_array_new (sizeof (p4est_quadrant_t *));
 
   virtual_ghost = P4EST_ALLOC_ZERO (p4est_virtual_ghost_t, 1);
   P4EST_ASSERT (btype <= virtual_quads->btype);
   virtual_ghost->btype = btype;
   virtual_ghost->mirror_proc_virtuals =
     P4EST_ALLOC_ZERO (int8_t, ghost->mirror_proc_offsets[p4est->mpisize]);
+
+  switch (btype) {
+  case P4EST_CONNECT_FACE:
+    max_neighbor_idx = P4EST_FACES;
+    break;
+#ifdef P4_TO_P8
+  case P8EST_CONNECT_EDGE:
+    max_neighbor_idx = P4EST_FACES + P8EST_EDGES;
+    break;
+#endif /* P4_TO_P8 */
+  case P4EST_CONNECT_FULL:
+      /* *INDENT-OFF* */
+      max_neighbor_idx = P4EST_FACES +
+#ifdef P4_TO_P8
+                         P8EST_EDGES +
+#endif /* P4_TO_P8 */
+                         P4EST_CHILDREN;
+      /* *INDENT-ON* */
+    break;
+  default:
+    SC_ABORT_NOT_REACHED ();
+  }
 
   /* populate mirror_proc_virtuals:
    * Iterate ghost->mirror_proc_mirrors for each process.  Consider for each
@@ -388,11 +486,35 @@ p4est_virtual_ghost_new (p4est_t * p4est, p4est_ghost_t * ghost,
     offset_end = ghost->mirror_proc_offsets[proc + 1];
     for (mirror_idx = offset_begin; mirror_idx < offset_end; ++mirror_idx) {
       mirror_qid = mesh->mirror_qid[ghost->mirror_proc_mirrors[mirror_idx]];
+      curr_quad = p4est_mesh_get_quadrant (p4est, mesh, mirror_qid);
       if (-1 < virtual_quads->virtual_qflags[mirror_qid]) {
-        virtual_ghost->mirror_proc_virtuals[mirror_idx] = 1;
+        for (neighbor_idx = 0;
+             virtual_ghost->mirror_proc_virtuals[mirror_idx] != 1
+             && neighbor_idx < max_neighbor_idx; ++neighbor_idx) {
+          sc_array_truncate (nqid);
+          sc_array_truncate (nquad);
+          p4est_mesh_get_neighbors (p4est, ghost, mesh, mirror_qid,
+                                    neighbor_idx, nquad, NULL, nqid);
+          for (n = 0; n < nqid->elem_count; ++n) {
+            neighbor_qid = *(p4est_locidx_t *) sc_array_index (nqid, n);
+            if (lq <= neighbor_qid && neighbor_qid < (lq + gq)) {
+              neighbor_qid -= lq;
+              if (mesh->ghost_to_proc[neighbor_qid] == proc) {
+                neighbor_quad =
+                  *(p4est_quadrant_t **) sc_array_index (nquad, n);
+                if (neighbor_quad->level > curr_quad->level) {
+                  virtual_ghost->mirror_proc_virtuals[mirror_idx] = 1;
+                }
+              }
+            }
+          }
+        }
       }
     }
   }
+
+  sc_array_destroy(nqid);
+  sc_array_destroy(nquad);
 
   return virtual_ghost;
 }
