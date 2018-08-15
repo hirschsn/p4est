@@ -171,8 +171,13 @@ test_pos_to_quad (p4est_t * p4est)
     }
 
     if (idx_hb != idx_lb) {
+#ifdef P4_TO_P8
       printf ("[p4est %i] idx_hb: %i idx_lb: %i pos %lf %lf %lf\n",
               p4est->mpirank, idx_hb, idx_lb, pos[0], pos[1], pos[2]);
+#else
+      printf ("[p4est %i] idx_hb: %i idx_lb: %i pos %lf %lf\n",
+              p4est->mpirank, idx_hb, idx_lb, pos[0], pos[1]);
+#endif
     }
     P4EST_ASSERT (idx_hb == idx_lb);
   }
@@ -230,7 +235,9 @@ test_upper_bound (p4est_t * p4est)
                                             0.5 * tree->quadrants.elem_count);
 
   if (ub_ll != -1 && ub_nll != -1) {
-    P4EST_ASSERT (0 == ub_ll == ub_ib == ub_ur);
+    P4EST_ASSERT (0 == ub_ll);
+    P4EST_ASSERT (0 == ub_ib);
+    P4EST_ASSERT (0 == ub_ur);
     P4EST_ASSERT (1 == ub_nll);
   }
 
