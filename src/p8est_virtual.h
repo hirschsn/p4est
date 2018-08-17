@@ -181,7 +181,7 @@ typedef struct p8est_virtual_ghost_exchange
   p8est_ghost_t      *ghost;
   p8est_virtual_t    *virtual_quads;
   p8est_virtual_ghost_t *virtual_ghost;
-  int                 minlevel, maxlevel;
+  int                 level;
   size_t              data_size;
   void              **ghost_data;
   sc_array_t          requests, sbuffers;

@@ -571,8 +571,7 @@ p4est_virtual_ghost_exchange_data_begin (p4est_t * p4est,
   exc->ghost = ghost;
   exc->virtual_quads = virtual_quads;
   exc->virtual_ghost = virtual_ghost;
-  exc->minlevel = 0;
-  exc->maxlevel = P4EST_QMAXLEVEL;
+  exc->level = -1;
   exc->data_size = data_size;
   exc->ghost_data = ghost_data;
   sc_array_init (&exc->requests, sizeof (sc_MPI_Request));
@@ -750,8 +749,7 @@ p4est_virtual_ghost_exchange_data_level_begin (p4est_t * p4est,
   exc->ghost = ghost;
   exc->virtual_quads = virtual_quads;
   exc->virtual_ghost = virtual_ghost;
-  exc->minlevel = level;
-  exc->maxlevel = level;
+  exc->level = level;
   exc->is_levels = 1;
   exc->data_size = data_size;
   exc->ghost_data = ghost_data;
