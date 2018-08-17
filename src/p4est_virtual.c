@@ -827,7 +827,7 @@ p4est_virtual_ghost_exchange_data_level_begin (p4est_t * p4est,
           SC_ABORT_NOT_REACHED ();
         }
         mpiret =
-          sc_MPI_Irecv ((uint8_t *) ghost_data[level] + offset * data_size,
+          sc_MPI_Irecv ((char *) ghost_data[level] + offset * data_size,
                         lmatches * data_size, sc_MPI_BYTE, q, (200 + level),
                         p4est->mpicomm, r);
         SC_CHECK_MPI (mpiret);
@@ -846,7 +846,7 @@ p4est_virtual_ghost_exchange_data_level_begin (p4est_t * p4est,
     if (ng > 0) {
       /* count how many quadrants match the level criterion:
        * either they have a matching level or are one level coarser holding
-       * virtual quadrants
+       * virtual quadrants (which the neighboring process has to expect)
        */
       for (lmatches = 0, theg = ng_excl; theg < ng_incl; ++theg) {
         mirror_idx = ghost->mirror_proc_mirrors[theg];
@@ -876,7 +876,7 @@ p4est_virtual_ghost_exchange_data_level_begin (p4est_t * p4est,
                           ((mesh->quad_level + level)->elem_count +
                            P4EST_CHILDREN * (virtual_quads->virtual_qlevels +
                                              level)->elem_count));
-            memcpy (mem, (uint8_t *) mirror_data[level] + data_size * offset,
+            memcpy (mem, (char *) mirror_data[level] + data_size * offset,
                     data_size);
             mem += data_size;
           }
@@ -887,7 +887,7 @@ p4est_virtual_ghost_exchange_data_level_begin (p4est_t * p4est,
                           ((mesh->quad_level + level)->elem_count +
                            P4EST_CHILDREN * (virtual_quads->virtual_qlevels +
                                              level)->elem_count));
-            memcpy (mem, (uint8_t *) mirror_data[level] + data_size * offset,
+            memcpy (mem, (char *) mirror_data[level] + data_size * offset,
                     P4EST_CHILDREN * data_size);
             mem += P4EST_CHILDREN * data_size;
           }
