@@ -117,10 +117,6 @@ void perform_test_level(p4est_connectivity_t *conn, p4est_t *p4est,
                         p4est_virtual_t *vq, p4est_virtual_ghost_t *vg) {
   int level;
   size_t quads_per_level;
-  const p4est_locidx_t lq = vq->local_num_quadrants;
-  const p4est_locidx_t lv = vq->local_num_virtuals;
-  const p4est_locidx_t gq = vq->ghost_num_quadrants;
-  const p4est_locidx_t gv = vq->ghost_num_virtuals;
 
   int **level_data_local = P4EST_ALLOC(int *, P4EST_QMAXLEVEL);
   int **level_data_ghost = P4EST_ALLOC(int *, P4EST_QMAXLEVEL);
