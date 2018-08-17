@@ -731,7 +731,7 @@ p4est_virtual_ghost_exchange_data_level_begin (p4est_t * p4est,
   p4est_locidx_t      ng_excl, ng_incl, ng, theg;
   p4est_locidx_t      offset, first_real, first_virt;
   p4est_locidx_t      lmatches;
-  p4est_locidx_t      ghst, mirror_idx, mirror_qid;
+  p4est_locidx_t      ghost_idx, mirror_idx, mirror_qid;
   p4est_quadrant_t   *m;
   sc_MPI_Request     *r;
   p4est_virtual_ghost_exchange_t *exc;
@@ -777,12 +777,12 @@ p4est_virtual_ghost_exchange_data_level_begin (p4est_t * p4est,
       P4EST_ASSERT (q != p4est->mpirank);
       for (lmatches = 0, theg = 0;
            theg < (mesh->ghost_level + level)->elem_count; ++theg) {
-        ghst =
+        ghost_idx =
           *(p4est_locidx_t *) sc_array_index (mesh->ghost_level + level,
                                               theg);
-        if (ng_excl <= ghst && ghst < ng_incl) {
+        if (ng_excl <= ghost_idx && ghost_idx < ng_incl) {
           if (first_real == -1) {
-            first_real = ghst;
+            first_real = ghost_idx;
           }
           ++lmatches;
         }
@@ -790,12 +790,12 @@ p4est_virtual_ghost_exchange_data_level_begin (p4est_t * p4est,
       for (theg = 0;
            theg < (virtual_quads->virtual_glevels + level)->elem_count;
            ++theg) {
-        ghst =
+        ghost_idx =
           *(p4est_locidx_t *) sc_array_index (virtual_quads->virtual_glevels +
                                               level, theg);
-        if (ng_excl <= ghst && ghst < ng_incl) {
+        if (ng_excl <= ghost_idx && ghost_idx < ng_incl) {
           if (first_virt == -1) {
-            first_virt = ghst;
+            first_virt = ghost_idx;
           }
           lmatches += P4EST_CHILDREN;
         }
