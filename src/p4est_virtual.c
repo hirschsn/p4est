@@ -208,16 +208,6 @@ p4est_virtual_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
   p4est_locidx_t     *gq_per_level_real, *gq_per_level_virt;
   p4est_locidx_t     *insert_locidx_t;
   p4est_quadrant_t   *ghost_quad;
-#if 0
-  const int           num_procs = p4est->mpisize;
-  int                 mpiret;
-  int                 q;
-  char               *mem, **sbuf;
-  p4est_locidx_t      ng_excl, ng_incl, ng, theg;
-  p4est_locidx_t      mirr;
-  sc_MPI_Request     *r;
-  sc_array_t         *requests, *sbuffers;
-#endif
 
   quads = sc_array_new (sizeof (p4est_quadrant_t *));
   qids = sc_array_new (sizeof (int));
@@ -273,65 +263,7 @@ p4est_virtual_new_ext (p4est_t * p4est, p4est_ghost_t * ghost,
                   lq_per_level_virt, &last_virtual_index, quads, qids);
   }
 
-#if 0
-  /** communicate virtual_qflags of mirror quadrants */
-  requests = sc_array_new (sizeof (sc_MPI_Request));
-  for (ng_excl = 0, q = 0; q < num_procs; ++q) {
-    ng_incl = ghost->proc_offsets[q + 1];
-    ng = ng_incl - ng_excl;
-    P4EST_ASSERT (ng >= 0);
-    if (ng > 0) {
-      r = (sc_MPI_Request *) sc_array_push (requests);
-      mpiret = sc_MPI_Irecv ((char *) virtual_quads->virtual_gflags +
-                             ng_excl * sizeof (p4est_locidx_t),
-                             ng * sizeof (p4est_locidx_t), sc_MPI_BYTE, q,
-                             P4EST_COMM_GHOST_EXCHANGE, p4est->mpicomm, r);
-      SC_CHECK_MPI (mpiret);
-      ng_excl = ng_incl;
-    }
-  }
-  P4EST_ASSERT (ng_excl == gq);
-
-  sbuffers = sc_array_new (sizeof (char *));
-  /* send data to other processors */
-  for (ng_excl = 0, q = 0; q < num_procs; ++q) {
-    ng_incl = ghost->mirror_proc_offsets[q + 1];
-    ng = ng_incl - ng_excl;
-    P4EST_ASSERT (ng >= 0);
-    if (ng > 0) {
-      /* every peer populates its own send buffer */
-      sbuf = (char **) sc_array_push (sbuffers);
-      mem = *sbuf = P4EST_ALLOC (char, ng * sizeof (p4est_locidx_t));
-      for (theg = 0; theg < ng; ++theg) {
-        mirr = ghost->mirror_proc_mirrors[ng_excl + theg];
-        P4EST_ASSERT (0 <= mirr && (size_t) mirr < ghost->mirrors.elem_count);
-        memcpy (mem, &virtual_quads->virtual_qflags[mesh->mirror_qid[mirr]],
-                sizeof (p4est_locidx_t));
-        mem += sizeof (p4est_locidx_t);
-      }
-      r = (sc_MPI_Request *) sc_array_push (requests);
-      mpiret =
-        sc_MPI_Isend (*sbuf, ng * sizeof (p4est_locidx_t), sc_MPI_BYTE, q,
-                      P4EST_COMM_GHOST_EXCHANGE, p4est->mpicomm, r);
-      SC_CHECK_MPI (mpiret);
-      ng_excl = ng_incl;
-    }
-  }
-
-  /* wait for messages to complete and clean up */
-  mpiret =
-    sc_MPI_Waitall (requests->elem_count, (sc_MPI_Request *) requests->array,
-                    sc_MPI_STATUSES_IGNORE);
-  SC_CHECK_MPI (mpiret);
-  sc_array_destroy (requests);
-  for (q = 0; q < sbuffers->elem_count; ++q) {
-    sbuf = (char **) sc_array_index (sbuffers, q);
-    P4EST_FREE (*sbuf);
-  }
-  sc_array_destroy (sbuffers);
-#else
   populate_ghost_flags(virtual_quads, p4est, ghost, mesh, quads, qids);
-#endif
 
   last_virtual_index = 0;
   /* set gflags and create level and offset arrays if necessary */
@@ -1084,47 +1016,6 @@ get_adjacent_edge (const int c, const int d)
   return 4 * d + masks[d] (c);
 }
 
-#if 0
-/* CAUTION: Functions are working fine but unused */
-/** Get edge index opposite to corner parallel to a specific spatial direction.
- * \param     [in]  c        Corner index 0 .. 2^(dim - 1).
- * \param     [in]  d        Spatial direction:
- *                              d = 0 .. x-axis
- *                              d = 1 .. y-axis
- *                              d = 2 .. z-axis
- * \return    edge index     0 .. 12
- */
-static int
-get_opposite_edge (const int c, const int d)
-{
-  int                 oc = c ^ (P4EST_CHILDREN - 1);
-  return get_adjacent_edge (oc, d);
-}
-
-/** Get both potentially hanging edge indices given a corner index and a
- * spatial direction.
- * \param [in]      c        Corner index.
- * \param [in]      d        Spatial direction.
- * \param     [out] hanging_edge_indices  Pointer to a container for two ints
- *                                        that will be populated with both
- *                                        potentially hanging edges parallel to
- *                                        d.
- */
-static void
-get_hanging_edges (const int c, const int d, int *hanging_edge_indices[2])
-{
-  int                 he[P4EST_DIM][2] = { {1, 2}, {5, 6}, {9, 10} };
-  int                 i;
-
-  /* Copy value for v0 two result array */
-  memcpy (hanging_edge_indices, he[d], sizeof (int) * 2);
-
-  /* Transform to given corner index */
-  for (i = 0; i < 2; ++i) {
-    *hanging_edge_indices[i] = *hanging_edge_indices[i] ^ masks[d] (c);
-  }
-}
-#endif /* 0 */
 #endif /* P4_TO_P8 */
 
 /** insert one element into result arrays
